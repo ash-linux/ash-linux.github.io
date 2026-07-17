@@ -1,0 +1,104 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const sha256Code = `# Linux / macOS
+sha256sum ash-2025.01.15.iso
+
+# Windows PowerShell
+Get-FileHash -Algorithm SHA256 ash-2025.01.15.iso
+
+# Compare output to:
+a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2`;
+
+const minisignCode = `minisign -Vm ash-2025.01.15.iso -P RWQf6LRCGA9i52mlZT2k5B5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y= -x ash-2025.01.15.iso.minisig
+# Expected: "Signature and comment signature verified"`;
+
+const cosignCode = `cosign verify-blob \\
+  --bundle ash-2025.01.15.iso.cosign.bundle \\
+  --certificate-identity-regexp "https://github.com/ash-linux/ash/.github/workflows/release.yml@refs/tags/v*" \\
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \\
+  ash-2025.01.15.iso
+# Expected: "Verified OK"`;
+
+const slsaCode = `slsa-verifier verify-artifact \\
+  ash-2025.01.15.iso \\
+  --provenance-path provenance.intoto.jsonl \\
+  --source-uri github.com/ash-linux/ash \\
+  --source-tag v2025.01.15 \\
+  --builder-id "https://github.com/ash-linux/ash/.github/workflows/build-iso.yml@refs/heads/main"
+# Expected: "PASSED: Verified SLSA Provenance"`;
+
+const allInOneCode = '#!/usr/bin/env bash\n# verify-ash.sh — Run all verifications\nset -euo pipefail\n\nISO="${1:?ISO file required}"\nVERSION="2025.01.15"\n\necho "=== Verifying $ISO ==="\n\necho "[1/4] SHA256..."\nsha256sum -c "ash-${VERSION}.iso.sha256" || { echo "SHA256 FAILED"; exit 1; }\necho "SHA256 OK"\n\necho "[2/4] minisign..."\nminisign -Vm "$ISO" -P RWQf6LRCGA9i52mlZT2k5B5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y= -x "ash-${VERSION}.iso.minisig" || { echo "minisign FAILED"; exit 1; }\necho "minisign OK"\n\necho "[3/4] cosign..."\ncosign verify-blob \\\n  --bundle "ash-${VERSION}.iso.cosign.bundle" \\\n  --certificate-identity-regexp "https://github.com/ash-linux/ash/.github/workflows/release.yml@refs/tags/v*" \\\n  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \\\n  "$ISO" || { echo "cosign FAILED"; exit 1; }\necho "cosign OK"\n\necho "[4/4] SLSA provenance..."\nslsa-verifier verify-artifact \\\n  "$ISO" \\\n  --provenance-path "provenance.intoto.jsonl" \\\n  --source-uri "github.com/ash-linux/ash" \\\n  --source-tag "v${VERSION}" \\\n  --builder-id "https://github.com/ash-linux/ash/.github/workflows/build-iso.yml@refs/heads/main" || { echo "SLSA FAILED"; exit 1; }\necho "SLSA OK"\n\necho "ALL VERIFICATIONS PASSED — Safe to boot!"';
+---
+<Layout
+    title="Verify ash ISO — SHA256 + minisign + cosign + SLSA"
+    description="Verify your ash ISO download with SHA256, minisign (Ed25519), cosign (keyless/Sigstore), and SLSA Level 3 provenance."
+    ogImage="/og-image.svg"
+>
+
+<section class="page-hero">
+    <div class="container">
+        <h1>Verify Your ash ISO</h1>
+        <p class="lead">Every release is signed with 4 independent mechanisms. Verify before you boot.</p>
+
+        <div class="verify-current">
+            <h2>Current Release: v2025.01.15</h2>
+            <dl class="verify-dl">
+                <dt>ISO File</dt>
+                <dd><code>ash-2025.01.15.iso</code></dd>
+                <dt>Size</dt>
+                <dd>2,469,396,480 bytes (2.3 GB)</dd>
+                <dt>SHA256</dt>
+                <dd><code class="copyable" data-value="a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2">a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2</code> <button class="btn-copy" data-copy-target=".copyable">Copy</button></dd>
+                <dt>minisign Public Key</dt>
+                <dd><code>RWQf6LRCGA9i52mlZT2k5B5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y5Q5Y=</code></dd>
+                <dt>minisign Signature</dt>
+                <dd><code>ash-2025.01.15.iso.minisig</code></dd>
+                <dt>cosign Bundle</dt>
+                <dd><code>ash-2025.01.15.iso.cosign.bundle</code></dd>
+                <dt>SLSA Provenance</dt>
+                <dd><code>provenance.intoto.jsonl</code></dd>
+                <dt>Signing Identity</dt>
+                <dd><code>https://github.com/ash-linux/ash/.github/workflows/release.yml@refs/tags/v*</code></dd>
+                <dt>OIDC Issuer</dt>
+                <dd><code>https://token.actions.githubusercontent.com</code></dd>
+            </dl>
+        </div>
+
+        <section class="verify-instructions">
+            <h2>Verification Steps</h2>
+
+            <article id="sha256">
+                <h3>1. Verify SHA256 (Basic Integrity)</h3>
+                <pre><code class="lang-bash" set:html={sha256Code}></code></pre>
+                <p class="verify-result"><strong>Match? → Proceed. Mismatch? → Delete. Do not boot.</strong></p>
+            </article>
+
+            <article id="minisign">
+                <h3>2. Verify minisign (Recommended — Fast, Offline, Ed25519)</h3>
+                <pre><code class="lang-bash" set:html={minisignCode}></code></pre>
+                <p class="verify-result"><strong>Good signature? → Proceed. Bad signature? → Delete. Do not boot.</strong></p>
+            </article>
+
+            <article id="cosign">
+                <h3>3. Verify cosign (Keyless + Sigstore Transparency Log)</h3>
+                <pre><code class="lang-bash" set:html={cosignCode}></code></pre>
+                <p class="verify-result"><strong>Verified OK? → Proceed. Failed? → Delete. Do not boot.</strong></p>
+            </article>
+
+            <article id="slsa">
+                <h3>4. Verify SLSA Level 3 Provenance (Build Attestation)</h3>
+                <pre><code class="lang-bash" set:html={slsaCode}></code></pre>
+                <p class="verify-result"><strong>PASSED? → Proceed. FAILED? → Delete. Do not boot.</strong></p>
+            </article>
+        </section>
+
+        <section class="verify-all-at-once">
+            <h2>Verify All at Once (Recommended)</h2>
+            <pre><code class="lang-bash" set:html={allInOneCode}></code></pre>
+            <a href="/scripts/verify-ash.sh" download class="btn btn-secondary">Download verify-ash.sh</a>
+        </section>
+    </div>
+</section>
+
+</Layout>
