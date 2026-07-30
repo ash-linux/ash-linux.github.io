@@ -1,153 +1,190 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { SITE_CONFIG } from '../data/site-config';
+
+const { deployUrl, quickUrl, repoUrl, version } = SITE_CONFIG;
+const oneLiner = `curl -sfL ${deployUrl} | sudo bash`;
 ---
+
 <Layout
-    title={`Deploy Ash-ISO — ${SITE_CONFIG.version}`}
-    description={`One-liner deploy of semantic file search, vector memory, and Hyprland desktop on your Arch Linux VMware VM.`}
+    title={`Install — ${SITE_CONFIG.siteTitle}`}
+    description={`Install Ash Linux on your Arch system. One command. Semantic file search in under two minutes.`}
     ogImage="/og-image.svg"
     ogUrl={`${SITE_CONFIG.siteUrl}/download`}
 >
 
 <section class="page-hero">
     <div class="container">
-        <h1>Deploy Ash-ISO on Your Arch VM</h1>
-        <p class="lead">One curl pipe bash — semantic filesystem, AI assistant, and Hyprland desktop on any Arch Linux VMware VM.</p>
-
-        <div class="download-primary">
-            <div class="file-info">
-                <span class="version">v{SITE_CONFIG.version} • ~2 minute deploy</span>
-            </div>
-
-            <div class="button-group">
-                <a href={SITE_CONFIG.deployUrl}
-                   class="btn btn-primary btn-lg download-btn"
-                   download="ultimate-fix-v2.sh">
-                    <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    <span>Download Script</span>
-                </a>
-            </div>
-
-            <pre><code>  curl -fsSL {SITE_CONFIG.deployUrl} | bash</code></pre>
-        </div>
-
-        <section class="section" id="what-it-does">
-            <h2>What the One-Liner Does</h2>
-            <div class="phases-grid">
-                <div class="phase-card"><h3>Phase 1 — System</h3><p>Updates packages, installs curl/jq, creates user <code>ash</code>, locks root password.</p></div>
-                <div class="phase-card"><h3>Phase 2 — Qdrant</h3><p>Pulls Qdrant Docker image, runs container on <code>:6333</code>.</p></div>
-                <div class="phase-card"><h3>Phase 3 — Ollama</h3><p>Installs Ollama system-wide, pulls <code>nomic-embed-text</code> model.</p></div>
-                <div class="phase-card"><h3>Phase 4 — LSFS</h3><p>Installs LSFS semantic filesystem daemon under <code>/opt/lsfs/</code>.</p></div>
-                <div class="phase-card"><h3>Phase 5 — Hyprland</h3><p>Installs Hyprland compositor, Waybar, Rofi, dunst, and essential UI tools.</p></div>
-                <div class="phase-card"><h3>Phase 6 — Launcher</h3><p>Creates <code>rofi-lsfs</code> launcher bound to Super+Space for semantic file search.</p></div>
-                <div class="phase-card"><h3>Phase 7 — Services</h3><p>Enables <code>lsfs-daemon</code> user service and Qdrant Docker restart policy.</p></div>
-                <div class="phase-card"><h3>Phase 8 — Cleanup</h3><p>Removes install script, prints post-install banner with next steps.</p></div>
-            </div>
-        </section>
-
-        <section class="section" id="prerequisites">
-            <h2>Prerequisites</h2>
-            <ul>
-                <li>An Arch Linux VMware VM (recommended) or any Arch Linux system</li>
-                <li>Hyprland compositor (optional but <strong>recommended</strong> for the Super+Space launcher)</li>
-                <li><code>sudo</code> access on the VM</li>
-                <li>Internet connection (for pulling Docker images and models)</li>
-            </ul>
-        </section>
-
-        <section class="section" id="the-command">
-            <h2>The One-Liner</h2>
-            <pre><code>  curl -fsSL {SITE_CONFIG.deployUrl} | bash</code></pre>
-            <p>Run as any user with <code>sudo</code> access. The script handles everything — installation, configuration, and service setup.</p>
-        </section>
-
-        <section class="section" id="post-deploy">
-            <h2>Post-Deploy</h2>
-            <ol>
-                <li><strong>Reboot</strong> the VM to start all services fresh.</li>
-                <li>Log in as <code>ash</code> (password set during Phase 1).</li>
-                <li>Press <strong>Super+Space</strong> to open the semantic file search launcher.</li>
-                <li>Try queries like <code>my notes</code>, <code>files from 42h</code>, or <code>config for ollama</code>.</li>
-            </ol>
-        </section>
-
-        <section class="section" id="troubleshooting">
-            <h2>Troubleshooting</h2>
-            <dl>
-                <dt>Qdrant not running?</dt>
-                <dd><code>sudo docker ps | grep qdrant</code> — check if the container is up. Re-run with <code>sudo docker restart qdrant</code>.</dd>
-                <dt>Ollama unreachable?</dt>
-                <dd><code>systemctl status ollama</code> — ensure the service is active. Check logs with <code>journalctl -u ollama -n 50</code>.</dd>
-                <dt>Launcher not appearing?</dt>
-                <dd>Ensure Hyprland is running. The launcher hook is at <code>/usr/local/bin/launch-lsfs.sh</code> — verify it exists and is executable.</dd>
-                <dt>LSFS daemon failing?</dt>
-                <dd><code>systemctl --user status lsfs-daemon</code> — check the user service status. Logs are in <code>~/.local/state/lsfs/</code>.</dd>
-            </dl>
-            <p>Still stuck? Re-run the <a href={SITE_CONFIG.deployUrl}>one-liner</a> — it is idempotent and safe to re-run.</p>
-        </section>
+        <h1>Install Ash Linux</h1>
+        <p class="lead">One command on any Arch Linux system. Interactive or silent — your choice.</p>
     </div>
 </section>
 
+<section class="section">
+    <div class="container">
+        <div class="install-primary">
+            <div class="install-method-card featured">
+                <div class="method-badge">RECOMMENDED</div>
+                <h2>Interactive Installer (TUI)</h2>
+                <p>Like <code>archinstall</code> — asks questions, shows progress, creates rollback snapshot.</p>
+                <pre><code>{oneLiner}</code></pre>
+                <a href={deployUrl} class="btn btn-primary" download="ash-install.sh">
+                    <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    <span>Download ash-install.sh</span>
+                </a>
+            </div>
+
+            <div class="install-method-card">
+                <h2>Quick Setup (Silent)</h2>
+                <p>For existing Ash users — re-run to repair or update. Non-interactive, idempotent.</p>
+                <pre><code>curl -sfL {quickUrl} | sudo bash</code></pre>
+                <a href={quickUrl} class="btn btn-secondary" download="ultimate-fix-v2.sh">
+                    <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    <span>Download quick-setup</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="prerequisites">
+    <div class="container">
+        <h2>Prerequisites</h2>
+        <ul class="prereq-list">
+            <li><strong>Arch Linux</strong> — any installation (bare metal, VM, WSL2, container)</li>
+            <li><strong>Root/sudo access</strong> — for systemd services and package installation</li>
+            <li><strong>Internet connection</strong> — for initial package download and model pull (offline after setup)</li>
+            <li><strong>4 GB RAM minimum</strong> — 8 GB recommended for desktop use</li>
+        </ul>
+    </div>
+</section>
+
+<section class="section" id="what-it-does">
+    <div class="container">
+        <h2>What the Installer Does</h2>
+        <div class="phases-grid">
+            <div class="phase-card"><h3>Phase 1 — Packages</h3><p>Installs dependencies: Python, curl, wofi, jq, fd, kitty, and build tools.</p></div>
+            <div class="phase-card"><h3>Phase 2 — Qdrant</h3><p>Downloads standalone binary. Creates system user, data directory, and systemd service on port <code>:6333</code>.</p></div>
+            <div class="phase-card"><h3>Phase 3 — Ollama</h3><p>Installs Ollama, enables systemd service, pulls <code>nomic-embed-text</code> model.</p></div>
+            <div class="phase-card"><h3>Phase 4 — LSFS Daemon</h3><p>Deploys Python indexer + bash launcher + query CLI. Systemd user service with polling watcher.</p></div>
+            <div class="phase-card"><h3>Phase 5 — Launcher</h3><p>Binds <kbd>Super</kbd>+<kbd>Space</kbd> to semantic search in Hyprland. Wofi-based results menu.</p></div>
+            <div class="phase-card"><h3>Phase 6 — Verification</h3><p>Health checks all 4 components. Prints dashboard with status and next steps.</p></div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="post-install">
+    <div class="container">
+        <h2>After Installation</h2>
+        <ol class="steps-list">
+            <li><strong>Press <kbd>Super</kbd>+<kbd>Space</kbd></strong> to open the semantic search launcher.</li>
+            <li>Type a query — <em>"my notes"</em>, <em>"config files"</em>, <em>"files from last 2h"</em>.</li>
+            <li>Select a result to open it in Kitty + Neovim (files) or Yazi (directories).</li>
+            <li>Use <code>lsfs-query 'your query'</code> for CLI search without the GUI.</li>
+        </ol>
+    </div>
+</section>
+
+<section class="section" id="troubleshooting">
+    <div class="container">
+        <h2>Troubleshooting</h2>
+        <dl class="troubleshoot-dl">
+            <dt>Qdrant not running?</dt>
+            <dd><code>sudo systemctl status qdrant</code> — check logs with <code>sudo journalctl -u qdrant -n 50</code>.</dd>
+            <dt>Ollama unreachable?</dt>
+            <dd><code>systemctl status ollama</code> — restart with <code>sudo systemctl restart ollama</code>.</dd>
+            <dt>Launcher not appearing?</dt>
+            <dd>Ensure Hyprland is running. Check <code>~/.config/hypr/hyprland.conf</code> for the <code>Super+Space</code> bind.</dd>
+            <dt>LSFS daemon not running?</dt>
+            <dd><code>systemctl --user status lsfs-daemon</code> — logs with <code>journalctl --user -u lsfs-daemon -f</code>.</dd>
+        </dl>
+        <p class="troubleshoot-fix">Re-run the <a href={deployUrl}>installer</a> — it is idempotent and safe to run multiple times.</p>
+    </div>
+</section>
+
+</Layout>
+
 <style>
-  .phases-grid {
+.install-primary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 1000px;
+    margin: 0 auto 48px;
+}
+.install-method-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    position: relative;
+}
+.install-method-card.featured {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 1px var(--brand);
+}
+.method-badge {
+    position: absolute;
+    top: -12px;
+    left: 24px;
+    background: var(--brand);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 4px 14px;
+    border-radius: 4px;
+}
+.install-method-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+.install-method-card p { font-size: 14px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
+.install-method-card pre {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    overflow-x: auto;
+    margin-bottom: 20px;
+    font-size: 13px;
+}
+.install-method-card .btn { width: 100%; justify-content: center; }
+.phases-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
     margin: 24px 0;
-  }
-  .phase-card {
+}
+.phase-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 20px;
-  }
-  .phase-card h3 {
-    font-size: 15px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: var(--brand);
-  }
-  .phase-card p {
-    font-size: 14px;
-    color: var(--text-dim);
-    line-height: 1.6;
-    margin: 0;
-  }
-  .section h2 {
-    font-size: 24px;
-    font-weight: 700;
-    margin: 40px 0 16px;
-    color: var(--text);
-  }
-  .section ul, .section ol {
-    padding-left: 24px;
-    line-height: 1.8;
-    color: var(--text-dim);
-  }
-  .section dl dt {
-    font-weight: 700;
-    color: var(--text);
-    margin-top: 16px;
-  }
-  .section dl dd {
-    color: var(--text-dim);
-    margin-left: 0;
-    line-height: 1.6;
-  }
-  .section dl dd code {
-    background: var(--bg-code);
+}
+.phase-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--brand); }
+.phase-card p { font-size: 14px; color: var(--text-dim); line-height: 1.6; margin: 0; }
+.phase-card kbd {
+    font-family: var(--font-mono);
+    background: var(--bg-elevated);
     padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+h2 { font-size: 24px; font-weight: 700; margin: 40px 0 16px; color: var(--text); }
+ul, ol { padding-left: 24px; line-height: 1.8; color: var(--text-dim); }
+dl dt { font-weight: 700; color: var(--text); margin-top: 20px; }
+dl dd { color: var(--text-dim); line-height: 1.6; }
+dl dd code { background: var(--bg-elevated); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+.troubleshoot-fix { margin-top: 24px; font-size: 14px; }
+.troubleshoot-fix a { color: var(--brand); font-weight: 600; }
+.steps-list li { margin-bottom: 8px; }
+.steps-list kbd {
+    font-family: var(--font-mono);
+    background: var(--brand-light);
+    color: var(--brand);
+    padding: 2px 8px;
     border-radius: 4px;
-    font-size: 13px;
-  }
-  .section pre {
-    background: var(--bg-code);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    overflow-x: auto;
-    font-size: 14px;
-  }
+    font-weight: 600;
+}
+@media (max-width: 768px) {
+    .install-primary { grid-template-columns: 1fr; }
+}
 </style>
-
-</Layout>

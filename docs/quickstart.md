@@ -1,56 +1,85 @@
-# Quick Start
+<![CDATA[# Quick Start
 
-## Prerequisites
+Get Ash Linux running on your existing Arch Linux system in under 2 minutes.
 
-- Arch Linux VM with Hyprland, git, and sudo access
-- Ollama installed and running (`ollama serve` or `systemctl start ollama`)
-- Internet connection for first-time setup
+## What You Need
 
-## One-Liner Deploy
+- **Arch Linux** — a running installation (VM or bare metal)
+- **Internet connection** — for the initial download only
+- **sudo access** — the installer needs root to install packages and services
+
+That's it. No pre-installed dependencies required.
+
+## Install
+
+Run this single command:
 
 ```bash
 curl -sfL https://raw.githubusercontent.com/exonew2/files/main/scripts/ultimate-fix-v2.sh | sudo bash
 ```
 
-Idempotent — safe to re-run. Installs:
-- Qdrant standalone binary from GitHub releases → systemd service on `:6333`
-- LSFS daemon (`~/.config/scripts/lsfs_daemon.py`) → user systemd service
-- Launcher hook (`~/.config/scripts/lsfs_launcher_hook.sh`) → Super+Space
-- Enables auto-login to Hyprland
+The installer is **idempotent** — you can safely run it again at any time. It will never break your existing setup.
 
-## Post-Deploy
+### What the Installer Does
 
-1. Reboot or restart Hyprland (Super+Shift+Q)
-2. Press **Super+Space** to open the semantic launcher
-3. Type a natural-language query (e.g. `config`, `scripts`, `TODO`)
-4. Select a result → opens in Kitty + Neovim (or respective application)
+1. **Tunes your system** — Sets inotify limits, swappiness, and other sysctl parameters for optimal performance
+2. **Installs packages** — `wofi`, `jq`, and other dependencies via `pacman`
+3. **Downloads Qdrant** — Standalone binary from GitHub releases (no Docker, no AUR)
+4. **Configures Ollama** — Enables the systemd service, pulls the `nomic-embed-text` embedding model
+5. **Deploys LSFS** — Installs the launcher hook and indexing daemon to `~/.config/scripts/`
+6. **Sets up services** — Creates systemd units, enables auto-start on boot
+7. **Configures Hyprland** — Binds `Super+Space` to the semantic search launcher
+8. **Enables auto-login** — Boots straight into Hyprland desktop
 
-## What to Test
+## First Use
 
-- **Search by concept** — type "TODO" or "config" → returns semantically similar files
-- **Search by time** — type "files from 42h" or "files from 3d" → falls back to `fd`/`find` time-based search
-- **Tail daemon logs** — `journalctl --user -u lsfs-daemon -f` to see real-time indexing
+1. **Reboot** your system (or restart Hyprland with `Super+Shift+Q`)
+2. Press **`Super+Space`** — the semantic search bar appears
+3. Type a query like `config` or `scripts` or `TODO`
+4. Select a result — it opens in Neovim, Yazi, or the appropriate application
 
-## Troubleshooting
+## Test It Out
+
+Try these searches to see Ash in action:
+
+| Query | What You'll Find |
+|-------|------------------|
+| `config` | Configuration files across your system |
+| `scripts` | Shell scripts and automation files |
+| `TODO` | Files containing task lists and notes |
+| `files from 2h` | Everything modified in the last 2 hours |
+| `files from 3d` | Everything modified in the last 3 days |
+
+## Verify Installation
+
+Run these commands to check that everything is working:
 
 ```bash
-# Qdrant not responding
-sudo systemctl status qdrant
-sudo journalctl -u qdrant --no-pager -n 20
+# Check Qdrant (vector database)
+curl http://localhost:6333/health
+# Expected: {"status":"ok","version":"..."}
 
-# Ollama not responding
-systemctl status ollama
-journalctl -u ollama --no-pager -n 20
+# Check Ollama (AI model server)
+curl http://localhost:11434/api/tags
+# Expected: JSON listing "nomic-embed-text"
 
-# LSFS daemon not running
-systemctl --user status lsfs-daemon
-journalctl --user -u lsfs-daemon --no-pager -n 20
+# Check LSFS daemon (file indexer)
+systemctl --user is-active lsfs-daemon
+# Expected: "active"
 
-# Launcher hook missing
-ls -l ~/.config/scripts/lsfs_launcher_hook.sh
+# Check launcher hook exists
+test -x ~/.config/scripts/lsfs_launcher_hook.sh && echo "OK" || echo "MISSING"
+```
 
-# Re-run deploy (idempotent)
+## Something Not Working?
+
+See the [Troubleshooting Guide](troubleshooting.md), or re-run the installer — it fixes most issues automatically:
+
+```bash
 curl -sfL https://raw.githubusercontent.com/exonew2/files/main/scripts/ultimate-fix-v2.sh | sudo bash
 ```
 
-If the launcher reports "Ollama not running" or "Qdrant not running", verify the respective services and restart them.
+---
+
+**Next:** [How Search Works →](how-search-works.md) | [VMware Setup →](vmware-setup.md)
+]]>

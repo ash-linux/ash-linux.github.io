@@ -2,161 +2,197 @@
 import Layout from '../layouts/Layout.astro';
 import { SITE_CONFIG } from '../data/site-config';
 
-const { siteUrl } = SITE_CONFIG;
-const oneLiner = 'curl -sfL https://raw.githubusercontent.com/exonew2/files/main/scripts/ultimate-fix-v2.sh | sudo bash';
+const { siteUrl, deployUrl, quickUrl, repoUrl, version, downloadCount } = SITE_CONFIG;
+const oneLiner = `curl -sfL ${deployUrl} | sudo bash`;
 ---
 
 <Layout
-    title="Ash-ISO — Deploy AI-Native Arch VM in One Command"
-    description="One-liner. Semantic search. Vector memory. VMware. Hyprland. — Deploy LSFS on your existing Arch VM in seconds."
+    title={`${SITE_CONFIG.siteTitle} — ${version}`}
+    description={SITE_CONFIG.siteDescription}
     ogImage="/og-image.svg"
     ogUrl={siteUrl}
 >
 
 <section class="hero" aria-labelledby="hero-title">
     <div class="container">
+        <div class="hero-badge">
+            <span>v{version}</span>
+            <span class="hero-badge-dot">•</span>
+            <span>{downloadCount} downloads</span>
+        </div>
+
         <h1 id="hero-title" class="hero-headline reveal">
-            Ash-ISO<br>
-            <span class="hero-headline-accent">Deploy AI-Native Arch VM in One Command</span>
+            Find any file<br>
+            <span class="hero-headline-accent">by what it means</span>
         </h1>
         <p class="hero-subhead reveal">
-            <strong>One-liner.</strong> Semantic search. Vector memory. VMware. Hyprland.
+            Semantic search for your files. Vector memory. Local AI. <strong>100% offline.</strong><br>
+            One command on any Arch Linux system.
         </p>
 
         <div class="hero-cta-row reveal" role="group" aria-label="Install command">
-            <pre class="one-liner"><code>{oneLiner}</code></pre>
-            <button class="btn btn-primary btn-lg" data-copy={oneLiner}>
-                <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                <span>Copy & run</span>
-            </button>
+            <div class="install-card">
+                <div class="install-header">
+                    <span class="install-label">INSTALL</span>
+                    <span class="install-arch">Arch Linux</span>
+                </div>
+                <pre class="one-liner"><code>{oneLiner}</code></pre>
+                <button class="btn btn-primary btn-lg" data-copy={oneLiner}>
+                    <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    <span>Copy & run</span>
+                </button>
+            </div>
         </div>
 
-        <p class="hero-footnote reveal">
-            Requires an existing Arch Linux VMware VM. <a href="https://github.com/exonew2/files" target="_blank" rel="noopener">GitHub →</a>
-        </p>
-    </div>
-</section>
+        <div class="hero-secondary reveal">
+            <p>Already on Arch? <a href={quickUrl} target="_blank" rel="noopener">Quick setup →</a></p>
+        </div>
 
-<section class="section zero-config reveal" aria-labelledby="what-title">
-    <div class="container">
-        <h2 id="what-title" class="section-title">What You Get</h2>
-        <div class="promise-grid">
-            <article class="promise-card">
-                <div class="promise-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--brand)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div>
-                <h3>Semantic Search</h3>
-                <p>Press <kbd>Super</kbd>+<kbd>Space</kbd> → launcher hook queries <strong>Ollama</strong> → embeddings stored in <strong>Qdrant</strong> → find files by concept, not just name.</p>
-            </article>
-            <article class="promise-card">
-                <div class="promise-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--brand)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
-                <h3>Vector Memory</h3>
-                <p><strong>Qdrant</strong> standalone — persistent vector database that remembers your context across sessions. Built for local-first AI.</p>
-            </article>
-            <article class="promise-card">
-                <div class="promise-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--brand)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-                <h3>VMware Optimized</h3>
-                <p>VMX workaround applied automatically. Clipboard sharing, drag & drop, and display drivers pre-configured for VMware Fusion &amp; Workstation.</p>
-            </article>
+        <div class="trust-row reveal">
+            <span class="trust-item"><span class="trust-label">100%</span> Offline</span>
+            <span class="trust-item"><span class="trust-label">No API keys</span> Zero telemetry</span>
+            <span class="trust-item"><span class="trust-label">{downloadCount}</span> Downloads</span>
+            <span class="trust-item"><span class="trust-label">MIT</span> Licensed</span>
+            <span class="trust-item"><a href={repoUrl} target="_blank" rel="noopener" class="trust-link">GitHub →</a></span>
         </div>
     </div>
 </section>
 
-<section class="section proof reveal" aria-labelledby="arch-title">
+<section class="section features reveal" aria-labelledby="features-title">
     <div class="container">
-        <h2 id="arch-title" class="section-title">Architecture</h2>
-        <pre class="arch-diagram"><code>┌─────────────────────────────────────────────────┐
-│                  Hyprland Desktop                │
-│  ┌───────────────────────────────────────────┐  │
-│  │         Super+Space Launcher (bash)        │  │
-│  │              ↓ semantic query               │  │
-│  │         Ollama (embedding model)            │  │
-│  │              ↓ vector embedding             │  │
-│  │         Qdrant (vector database)            │  │
-│  │              ↓ ranked results               │  │
-│  │         LSFS semantic file search           │  │
-│  └───────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────┐  │
-│  │          VMware VMX workaround             │  │
-│  │          Clipboard sharing                 │  │
-│  │          Display drivers                   │  │
-│  └───────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────┘</code></pre>
-        <p class="arch-caption">Single VM. One command. Everything wired.</p>
-    </div>
-</section>
-
-<section class="section comparison reveal" aria-labelledby="why-no-iso-title">
-    <div class="container">
-        <h2 id="why-no-iso-title" class="section-title">Why Not ISO?</h2>
-        <p class="section-subtext">Ash-ISO is a <em>deploy-on-existing-Arch</em> script. No bloated ISO download, no bespoke kernel, no lock-in.</p>
-        <ul class="why-list">
-            <li><strong>You already have Arch.</strong> Why download 2.3 GB when one command works on your existing VM?</li>
-            <li><strong>Your config, your kernel.</strong> Keep your custom kernel, modules, and packaging. Ash-ISO layers on top.</li>
-            <li><strong>No trust transfer.</strong> No ISO build pipeline to audit. One bash script — read it before you run it.</li>
-            <li><strong>Roll with pacman.</strong> Your existing <code>pacman -Syu</code> keeps working. No immutable image to rebuild.</li>
-        </ul>
-
-        <h3 class="comparison-subtitle">Ash-ISO vs Plain Arch vs ISO-Based Projects</h3>
-        <div class="table-wrapper">
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Feature</th>
-                        <th scope="col"><strong>Ash-ISO</strong></th>
-                        <th scope="col">Plain Arch VM</th>
-                        <th scope="col">Custom ISO</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><th scope="row">Setup Time</th><td><span class="check">~2 min</span> One command</td><td><span class="cross">Hours</span> Manual</td><td><span class="cross">~45 min</span> Download + boot</td></tr>
-                    <tr><th scope="row">Semantic Search</th><td><span class="check">Yes</span> LSFS + Super+Space</td><td><span class="cross">No</span> DIY</td><td><span class="check">Yes</span></td></tr>
-                    <tr><th scope="row">Vector Memory</th><td><span class="check">Yes</span> Qdrant standalone</td><td><span class="cross">No</span> Manual install</td><td><span class="check">Yes</span></td></tr>
-                    <tr><th scope="row">VMware Tuning</th><td><span class="check">Yes</span> VMX fix + clipboard</td><td><span class="cross">No</span> Manual</td><td><span class="warn">Partial</span></td></tr>
-                    <tr><th scope="row">Desktop</th><td><span class="check">Hyprland</span></td><td><span class="cross">No</span> DIY</td><td><span class="warn">Various</span></td></tr>
-                    <tr><th scope="row">Supply Chain</th><td><span class="check">Auditable</span> One bash script</td><td><span class="check">Full control</span></td><td><span class="warn">Opaque ISO</span></td></tr>
-                    <tr><th scope="row">ISO Download</th><td><span class="check">None</span> Zero bytes</td><td><span class="check">None</span></td><td><span class="cross">2.3+ GB</span></td></tr>
-                    <tr><th scope="row">Custom kernel / modules</th><td><span class="check">Yours</span> Unchanged</td><td><span class="check">Yours</span></td><td><span class="cross">Bespoke</span></td></tr>
-                    <tr><th scope="row">Pacman Updates</th><td><span class="check">Normal</span> Uninterrupted</td><td><span class="check">Normal</span></td><td><span class="cross">Immutable</span> Requires rebuild</td></tr>
-                    <tr><th scope="row">Rollback</th><td><span class="warn">Btrfs/ZFS</span> Your choice</td><td><span class="warn">Btrfs/ZFS</span> Your choice</td><td><span class="check">Snapper built in</span></td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</section>
-
-<section class="section features reveal" aria-labelledby="how-title">
-    <div class="container">
-        <h2 id="how-title" class="section-title">How It Works</h2>
+        <h2 id="features-title" class="section-title">What You Get</h2>
         <div class="features-grid">
             <article class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div>
-                <h3>One-Liner Deploy</h3>
-                <p>Pipe the script from the repo into <code>sudo bash</code>. It detects your VM, installs LSFS, Ollama, Qdrant, and wires the Hyprland launcher hook — all in under two minutes.</p>
-            </article>
-            <article class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--ai)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div>
+                <div class="feature-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--brand)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                </div>
                 <h3>Semantic File Search</h3>
-                <p>Hit <kbd>Super</kbd>+<kbd>Space</kbd>, type what you mean — "budget spreadsheet from last quarter" or "that blog draft about AI safety". The bash launcher sends your query to Ollama, which embeds it, and Qdrant returns the closest files.</p>
+                <p>Press <kbd>Super</kbd>+<kbd>Space</kbd>, type what you mean — <em>"budget spreadsheet"</em>, <em>"backup script"</em>, <em>"my config"</em>. Finds files by meaning, not just filename.</p>
             </article>
             <article class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--brand)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-                <h3>Vector Memory That Persists</h3>
-                <p>Qdrant runs as a systemd service with persistent storage. Your semantic index survives reboots. Import new files and they're automatically embedded and searchable via the launcher.</p>
+                <div class="feature-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--ai)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <h3>Qdrant Vector Database</h3>
+                <p>Persistent vector memory that survives reboots. Every file is embedded and searchable within seconds of being saved.</p>
             </article>
             <article class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--brand)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-                <h3>VMware First-Class</h3>
-                <p>The script applies the VMX workaround for proper GPU acceleration, enables bidirectional clipboard, drag-and-drop, and installs <code>open-vm-tools</code> — tuned for VMware Fusion &amp; Workstation.</p>
+                <div class="feature-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--brand)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                </div>
+                <h3>Ollama + nomic-embed-text</h3>
+                <p>Runs locally — no cloud, no API keys. Converts your files into 768-dimension meaning vectors for instant semantic retrieval.</p>
             </article>
             <article class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-                <h3>No Lock-in</h3>
-                <p>Every component is a standard Arch package. Uninstall any piece with <code>pacman -R</code>. The script is idempotent — run it again to repair or update. Your system, your rules.</p>
+                <div class="feature-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--brand)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <h3>Desktop Integration</h3>
+                <p>Hyprland + Waybar + Kitty + Wofi + wlogout — full Catppuccin-themed desktop. Auto-login, auto-start, auto-index.</p>
             </article>
             <article class="feature-card">
-                <div class="feature-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--ai)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
-                <h3>Auditable by Design</h3>
-                <p>No opaque ISO. Read the single bash script before running it. Pin a specific commit. Fork it, patch it, own it. The entire deploy pipeline is a file on GitHub.</p>
+                <div class="feature-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--ai)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h3>Rollback & Safety</h3>
+                <p>Btrfs snapshot before every change. Idempotent installer — re-run anytime to repair or update. No destructive changes.</p>
             </article>
+            <article class="feature-card">
+                <div class="feature-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                </div>
+                <h3>Single Command Setup</h3>
+                <p>Interactive TUI (like archinstall) or silent mode. Detects your system, installs everything, and shows a live dashboard.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="section comparison reveal" aria-labelledby="arch-title">
+    <div class="container">
+        <h2 id="arch-title" class="section-title">Architecture</h2>
+        <div class="arch-diagram-wrapper">
+            <pre class="arch-diagram"><code>┌─────────────────────────────────────────────────────────┐
+│                    Hyprland Desktop                        │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │           Super+Space Launcher (bash/wofi)            │  │
+│  │                ↓ semantic query                       │  │
+│  │           Ollama → nomic-embed-text                   │  │
+│  │                ↓ 768-dim vector                       │  │
+│  │           Qdrant vector database                      │  │
+│  │                ↓ cosine similarity                    │  │
+│  │           LSFS file indexer (Python)                  │  │
+│  │                ↓ ranked results                       │  │
+│  │           Kitty → Neovim / Yazi                       │  │
+│  └─────────────────────────────────────────────────────┘  │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │  Btrfs snapshots  │  Ollama API  │  Systemd services │  │
+│  └─────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘</code></pre>
+        </div>
+        <p class="section-subtext center">Everything runs on <code>localhost</code>. No cloud. No telemetry. No API keys.</p>
+    </div>
+</section>
+
+<section class="section how-it-works reveal" aria-labelledby="how-title">
+    <div class="container">
+        <h2 id="how-title" class="section-title">How It Works</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Run the installer</h3>
+                <p>One <code>curl | sudo bash</code>. Interactive TUI guides you through. Btrfs snapshot taken before any change.</p>
+            </div>
+            <div class="step-connector" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="var(--brand)" stroke-width="2"/></svg></div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Qdrant + Ollama start</h3>
+                <p>Vector database and embedding engine boot as systemd services. The <code>nomic-embed-text</code> model is pulled and pinned in memory.</p>
+            </div>
+            <div class="step-connector" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="var(--brand)" stroke-width="2"/></svg></div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Your files are indexed</h3>
+                <p>LSFS daemon walks your home directory, embeds every text file, and stores the vectors in Qdrant. New files indexed in real-time.</p>
+            </div>
+            <div class="step-connector" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="var(--brand)" stroke-width="2"/></svg></div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <h3>Search by meaning</h3>
+                <p>Press <kbd>Super</kbd>+<kbd>Space</kbd>, type <em>"my backup scripts"</em> or <em>"files from last 2h"</em>. Results appear instantly — ranked by semantic similarity.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section usage reveal" aria-labelledby="usage-title">
+    <div class="container">
+        <h2 id="usage-title" class="section-title">Usage</h2>
+        <div class="usage-grid">
+            <div class="usage-card">
+                <div class="usage-label">Search by concept</div>
+                <div class="usage-command"><code>lsfs-query 'database config files'</code></div>
+            </div>
+            <div class="usage-card">
+                <div class="usage-label">Search by time</div>
+                <div class="usage-command"><code>lsfs-query 'files from last 3 days'</code></div>
+            </div>
+            <div class="usage-card">
+                <div class="usage-label">Open in Neovim</div>
+                <div class="usage-command"><kbd>Super</kbd>+<kbd>Space</kbd> → select → opens in Kitty + Neovim</div>
+            </div>
+            <div class="usage-card">
+                <div class="usage-label">Monitor status</div>
+                <div class="usage-command"><code>ash-doctor</code></div>
+            </div>
+            <div class="usage-card">
+                <div class="usage-label">Live logs</div>
+                <div class="usage-command"><code>journalctl --user -u lsfs-daemon -f</code></div>
+            </div>
+            <div class="usage-card">
+                <div class="usage-label">Re-run installer</div>
+                <div class="usage-command">{oneLiner}</div>
+            </div>
         </div>
     </div>
 </section>
@@ -166,33 +202,33 @@ const oneLiner = 'curl -sfL https://raw.githubusercontent.com/exonew2/files/main
         <h2 id="faq-title" class="section-title">FAQ</h2>
         <dl class="faq-list">
             <div class="faq-item">
-                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-1">Do I need to start from a fresh Arch install?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
+                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-1">Do I need a fresh Arch install?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
                 <dd id="faq-1" class="faq-answer" hidden>
-                    <p>No. The script works on any existing Arch Linux VMware VM — fresh or battle-worn. It installs packages and configures services without wiping your data. <a href="https://github.com/exonew2/files" target="_blank" rel="noopener">Check the README →</a></p>
+                    <p>No. Works on any existing Arch Linux system — fresh or battle-worn. Idempotent installer, no data loss.</p>
                 </dd>
             </div>
             <div class="faq-item">
-                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-2">What if I already have Hyprland?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
+                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-2">Does it need internet?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
                 <dd id="faq-2" class="faq-answer" hidden>
-                    <p>The script detects Hyprland. If present, it only adds the <kbd>Super</kbd>+<kbd>Space</kbd> launcher hook. No duplicate configs, no destructive changes.</p>
+                    <p>Only for the initial setup (package download, model pull). After that, everything runs 100% offline. No telemetry, no phone-home.</p>
                 </dd>
             </div>
             <div class="faq-item">
-                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-3">Is this secure?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
+                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-3">How much disk space?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
                 <dd id="faq-3" class="faq-answer" hidden>
-                    <p>Read the script before running it — it's one file on GitHub. Services are sandboxed via systemd service hardening. Qdrant binds to localhost only. Ollama runs unprivileged.</p>
+                    <p>Base system ~5 GB. AI model ~300 MB. Qdrant database grows based on files indexed — typically under 500 MB.</p>
                 </dd>
             </div>
             <div class="faq-item">
-                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-4">Can I use this on bare metal?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
+                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-4">Can I use this on non-Arch?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
                 <dd id="faq-4" class="faq-answer" hidden>
-                    <p>Yes — but the VMX workaround and <code>open-vm-tools</code> only apply to VMware VMs. On bare metal, you get everything else: LSFS, Ollama, Qdrant, and the Hyprland launcher hook.</p>
+                    <p>The core components (Ollama + Qdrant + LSFS) work on any Linux distro. The installer targets Arch — porting to Ubuntu/Fedora would replace <code>pacman</code> calls.</p>
                 </dd>
             </div>
             <div class="faq-item">
-                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-5">How do I update?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
+                <dt><button class="faq-question" aria-expanded="false" aria-controls="faq-5">How is this different from Spotlight?<svg class="faq-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></dt>
                 <dd id="faq-5" class="faq-answer" hidden>
-                    <p>Standard Arch pacman updates for packages. Rerun the script to pick up the latest config. The script is idempotent — running it again only applies new changes.</p>
+                    <p>Spotlight matches filenames and literal text. Ash uses <strong>vector embeddings</strong> — it understands meaning. "backup" finds <code>snapshot.sh</code> even if the word "backup" never appears in the filename.</p>
                 </dd>
             </div>
         </dl>
@@ -201,8 +237,8 @@ const oneLiner = 'curl -sfL https://raw.githubusercontent.com/exonew2/files/main
 
 <section class="section cta-final reveal" aria-labelledby="cta-title">
     <div class="container">
-        <h2 id="cta-title" class="section-title">Deploy Now</h2>
-        <p class="cta-final-text">One command. Your existing Arch VM. Semantic search in under two minutes.</p>
+        <h2 id="cta-title" class="section-title">Get Started</h2>
+        <p class="cta-final-text">One command. Your existing Arch system. Semantic search in under two minutes.</p>
         <div class="cta-final-row">
             <pre class="one-liner"><code>{oneLiner}</code></pre>
             <button class="btn btn-primary btn-xl" data-copy={oneLiner}>
@@ -211,9 +247,160 @@ const oneLiner = 'curl -sfL https://raw.githubusercontent.com/exonew2/files/main
             </button>
         </div>
         <div class="cta-final-trust">
-            <span>Repo: <a href="https://github.com/exonew2/files" target="_blank" rel="noopener">github.com/exonew2/files</a></span>
+            <span>Repo: <a href={repoUrl} target="_blank" rel="noopener">{repoUrl}</a></span>
+            <span>License: <a href={`${repoUrl}/blob/main/LICENSE`} target="_blank" rel="noopener">MIT</a></span>
         </div>
     </div>
 </section>
 
 </Layout>
+
+<style>
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: var(--brand-light);
+    color: var(--brand);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    margin-bottom: 24px;
+}
+.hero-badge-dot { opacity: 0.4; }
+.hero-secondary {
+    text-align: center;
+    margin-bottom: 32px;
+    font-size: 14px;
+    color: var(--text-dim);
+}
+.hero-secondary a { color: var(--brand); text-decoration: none; font-weight: 600; }
+.hero-secondary a:hover { text-decoration: underline; }
+
+.install-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    max-width: 680px;
+    width: 100%;
+    box-shadow: var(--shadow-lg);
+}
+.install-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.install-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+}
+.install-arch {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--brand);
+    background: var(--brand-light);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+.install-card .btn { margin-top: 12px; }
+
+.arch-diagram-wrapper {
+    max-width: 700px;
+    margin: 0 auto 24px;
+}
+.arch-diagram {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.7;
+}
+.arch-diagram code { font-family: var(--font-mono); }
+
+.steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.step {
+    flex: 1;
+    min-width: 200px;
+    max-width: 260px;
+    text-align: center;
+    padding: 24px;
+}
+.step-num {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: white;
+    font-weight: 800;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-family: var(--font-mono);
+}
+.step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+.step p { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+.step-connector { flex-shrink: 0; color: var(--brand); }
+@media (max-width: 768px) {
+    .step { min-width: 100%; max-width: 100%; }
+    .step-connector { transform: rotate(90deg); }
+}
+
+.usage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.usage-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.usage-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+.usage-command code, .usage-command kbd {
+    font-family: var(--font-mono);
+    background: var(--bg-elevated);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--text);
+}
+.usage-command kbd {
+    background: var(--brand-light);
+    color: var(--brand);
+    font-weight: 600;
+}
+
+.section-subtext.center { text-align: center; color: var(--text-dim); font-size: 14px; margin-top: 16px; }
+.section-subtext code { background: var(--bg-elevated); padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); }
+</style>

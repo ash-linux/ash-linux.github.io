@@ -1,75 +1,84 @@
-# Comparison — ash-iso vs Other Approaches
+<![CDATA[# Comparison — Ash Linux vs Alternatives
 
-## Quick Comparison
+How Ash compares to other approaches for setting up an AI-powered Linux desktop.
 
-| Feature | **ash-iso on Arch VM** | Plain Arch Setup | Ubuntu Desktop | ISO-Based AI OS Projects |
-|---------|------------------------|------------------|----------------|--------------------------|
-| **Setup Time** | 1 min (one-liner) | 2–4 hours | 30 min install + manual config | 45s boot |
-| **Semantic Search** | ✅ Built-in (LSFS) | ❌ Manual | ❌ Manual | ⚠️ Often absent |
-| **Vector Memory** | ✅ Qdrant standalone | ❌ None | ❌ None | ⚠️ Varies |
-| **Pure-Bash Launcher** | ✅ curl + wofi only | ❌ None | ❌ None | ❌ Python/JS stack |
-| **One-Liner Deploy** | ✅ `curl | sudo bash` | ❌ N/A | ❌ N/A | ❌ ISO download |
-| **Local / Offline** | ✅ 100% | ✅ 100% | ✅ 100% | ✅ 100% |
-| **VMware Optimized** | ⚠️ VMX fix documented, clipboard needs host action | ❌ Manual | ❌ Manual | ❌ Generic |
-| **Rollback** | ⚠️ Manual backups | ⚠️ Manual backups | ⚠️ Manual snapshots | ✅ Btrfs snapshots |
-| **Customization** | ✅ Full Arch control | ✅ Full Arch control | ❌ Constrained | ⚠️ Fixed filesystem |
-| **GPU Passthrough** | ⚠️ VMX workaround needed | ⚠️ Manual | ⚠️ Manual | ✅ Pre-configured |
+## At a Glance
 
-## Detailed Comparison
+| Feature | **Ash Linux** | Plain Arch Setup | Ubuntu Desktop | ISO-Based AI OS |
+|---------|---------------|------------------|----------------|-----------------|
+| **Setup Time** | ~2 minutes (one-liner) | 2–4 hours | 30 min + manual config | Download ISO + boot |
+| **Semantic Search** | ✅ Built-in | ❌ None | ❌ None | ⚠️ Varies |
+| **Vector Database** | ✅ Qdrant (auto-configured) | ❌ None | ❌ None | ⚠️ Varies |
+| **AI Launcher** | ✅ Super+Space | ❌ None | ❌ None | ❌ Usually absent |
+| **One-Line Install** | ✅ `curl \| sudo bash` | ❌ N/A | ❌ N/A | ❌ ISO download |
+| **100% Offline** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| **VMware Optimized** | ✅ Documented workarounds | ❌ Manual | ❌ Manual | ❌ Generic |
+| **Customizable** | ✅ Full Arch control | ✅ Full Arch control | ❌ Constrained | ⚠️ Fixed filesystem |
 
-### vs Plain Arch Linux Setup
+## Ash vs Plain Arch Linux
 
-| Aspect | ash-iso | Plain Arch |
-|--------|---------|------------|
-| Install + Config Time | ~1 minute | 2–4 hours |
-| Semantic File Search | Pre-configured | Manual (none available) |
-| Vector DB | Qdrant binary systemd service | None |
-| AI Launcher | Super+Space → wofi → curl → Qdrant | None |
-| Hyprland Config | Pre-tuned for VMware | Manual |
-| Auto-Login | Configured out of the box | Manual |
+If you already run Arch, Ash adds a complete AI search stack in one command:
 
-### vs Ubuntu Desktop
+| | Ash Linux | Doing It Yourself |
+|--|-----------|-------------------|
+| Time to set up | ~2 minutes | 2–4 hours of reading docs, installing, configuring |
+| Semantic file search | Pre-configured and working | Doesn't exist — you'd have to build it |
+| Vector database | Qdrant systemd service, auto-starts | Manual download, configuration, service setup |
+| AI launcher | `Super+Space` → search by meaning | Nothing comparable |
+| Auto-login | Configured out of the box | Manual agetty + `.bash_profile` setup |
+| Hyprland for VMware | VMX workarounds documented | Trial and error |
 
-| Aspect | ash-iso | Ubuntu |
-|--------|---------|--------|
-| Package Freshness | Arch (rolling) | Ubuntu (fixed release) |
-| Semantic Search | Native | None (or GNOME Search) |
-| AI Stack Integration | One-command deploy | Manual pip/apt install |
-| Wayland Compositor | Hyprland (pre-configured) | GNOME (generic) |
-| Storage Overhead | Minimal (scripts only) | 5–10 GB base |
+## Ash vs Ubuntu Desktop
 
-### vs ISO-Based AI OS Projects
+| | Ash Linux | Ubuntu |
+|--|-----------|--------|
+| Package freshness | Arch (rolling release) | Ubuntu (fixed release every 6 months) |
+| Semantic search | Built-in, native | None (GNOME Search is filename-only) |
+| AI stack | One-command deploy | Manual pip/apt install + configuration |
+| Wayland compositor | Hyprland (tiling, pre-configured) | GNOME (generic, stacking) |
+| Storage overhead | Minimal (scripts only) | 5–10 GB base system |
+| Learning curve | Requires Arch familiarity | More beginner-friendly |
 
-| Aspect | ash-iso | ISO-based projects |
-|--------|---------|--------------------|
+## Ash vs ISO-Based AI OS Projects
+
+| | Ash Linux | ISO-Based Projects |
+|--|-----------|-------------------|
 | Deployment | Script on existing Arch | Download + boot ISO |
-| Host Modification | No reinstall needed | Destructive (new VM/partition) |
-| File System | Your existing setup | Btrfs subvolumes, read-only root |
-| Update Model | Re-run deploy script | ISO re-download or A/B updates |
-| Snapshot/Rollback | Manual (backup your data) | Built-in (Snapper, Btrfs) |
-| Flexibility | Full control of base system | Opinionated defaults |
+| Destructive? | No — adds to your existing setup | Yes — new VM or partition |
+| Filesystem | Your existing setup, untouched | Btrfs subvolumes, read-only root |
+| Updates | Re-run the installer script | ISO re-download or A/B updates |
+| Snapshots | Manual backups | Built-in (Snapper, Btrfs) |
+| Flexibility | Full control of base system | Opinionated, pre-baked defaults |
 
 ## When to Use What
 
-| Use Case | Recommendation |
-|----------|----------------|
-| Already have Arch + Hyprland, want semantic search | **ash-iso** (one-liner) |
-| Setting up a new VM for AI-assisted development | Arch install + ash-iso |
-| Want zero-config AI OS appliance | ISO-based project |
-| Need maximum customization | Plain Arch + cherry-pick ash-iso scripts |
-| Ephemeral experiments | ash-iso (scratchable VM) |
+| Your Situation | Recommendation |
+|----------------|----------------|
+| Already on Arch + Hyprland, want semantic search | **Ash Linux** (one-liner install) |
+| Setting up a fresh VM for AI development | Fresh Arch install → Ash one-liner |
+| Want a zero-config AI appliance | Consider an ISO-based AI OS project |
+| Want maximum customization | Plain Arch + cherry-pick Ash scripts |
+| Ephemeral experiments | Ash in a scratchable VM |
 
-## Key Differentiators
+## What Makes Ash Different
 
-- **Semantic search** — bash launcher calls Ollama embeddings API, queries Qdrant. No Python in the search path.
-- **nomic-embed-text** — 768-dim, Ollama-native model, small and fast on CPU.
-- **Qdrant standalone binary** — no AUR, no Docker, no Python SDK. Static musl binary from GitHub releases.
-- **VMware-first** — VMX workaround documented for Hyprland stability, open-vm-tools installed.
-- **One-liner deploy** — idempotent, re-runnable. No ISO download, no hypervisor import.
+- **Semantic search via bash** — The launcher is ~50 lines of pure bash using `curl`. No Python in the search path.
+- **nomic-embed-text** — 768-dim, Ollama-native embedding model. Small, fast, runs on CPU.
+- **Qdrant standalone binary** — No AUR, no Docker, no Python SDK. Static binary from GitHub.
+- **VMware-first** — Display and clipboard workarounds are documented and automated.
+- **Idempotent installer** — Re-run anytime. It fixes, never breaks.
 
 ## Limitations
 
-- **Clipboard**: open-vm-tools installed, but host-side `.vmx` edit required for copy/paste
-- **Display**: VMX workaround (`mks.enableVulkanRenderer = "FALSE"`) needed for Hyprland stability
-- **Index scope**: daemon indexes `~/.config/scripts` by default; other paths must be configured manually
-- **No rollback**: no Btrfs snapshots or A/B update mechanism — backup manually
+Be aware of these trade-offs:
+
+- **Clipboard** needs a manual host-side `.vmx` edit for VMware
+- **Display** needs a manual host-side `.vmx` edit for Hyprland stability
+- **Default index scope** is limited — configure additional paths manually
+- **No automatic rollback** — no Btrfs snapshots; back up manually
+- **Arch-only** — the installer requires pacman; no Ubuntu/Fedora support yet
+
+---
+
+**Next:** [Quick Start →](quickstart.md) | [How Search Works →](how-search-works.md)
+]]>

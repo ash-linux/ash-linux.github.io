@@ -45,6 +45,7 @@ help:
 	@echo "  release-arm64      Full ARM64 release pipeline"
 	@echo ""
 	@echo "Other:"
+	@echo "  install            Run ash-install.sh (interactive TUI setup on Arch)"
 	@echo "  landing            Build and preview landing page"
 	@echo "  clean              Clean build artifacts"
 	@echo ""
@@ -177,6 +178,10 @@ release-arm64: build-iso-arm64 sign distribute
 	@echo "ARM64 release $(VERSION) complete!"
 
 # ─── Other ───────────────────────────────────────────────────────────
+
+# Run ash-install.sh interactive setup
+install:
+	sudo bash ./scripts/ash-install.sh
 
 # Landing page
 landing:

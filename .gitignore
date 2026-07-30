@@ -7,6 +7,14 @@ node_modules/
 *.swo
 *~
 .DS_Store
+git-push/
+got-push/
+landing-page/dist/
+landing-page/node_modules/
+landing-page/.astro/
+ai-services/.venv/
+ai-services/node_modules/
+out/
 Thumbs.db
 iso-profile/airootfs/usr/lib/lsfs/__pycache__/
 *.log
