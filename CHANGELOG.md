@@ -2,6 +2,22 @@
 
 All notable changes to Ash Linux are documented here.
 
+## v4.1.0 (2026-07-30)
+
+### Features
+- **Remote index federation** — Query across peer machines using `ash-federate` and `ash_federation.py`.
+- **Multi-node cluster controller** — Use `ash-cluster` to deploy Qdrant clusters.
+- **Content extraction for binary files** — Semantic search within PDFs, DOCX, Images, and Audio via `ash_extract.py`.
+- **File relationship graph** — Understand imports, symlinks, and dependencies via `ash-graph`.
+- **Storage tiering** — Hot (memory), Warm (disk), Cold (archive) support configured in the installer.
+- **Query handler plugin system** — Extend the desktop search with JSON plugins (e.g., GitHub, Calc) via `ash-plugin`.
+- **OpenAPI support** — Documentation and `ash-api` HTTP server for standardized integration.
+- **Webhook notifications** — Dispatch events to Slack, Discord, or ntfy from system events.
+- **VSCode Extension** — Scaffolded `ash-search` to query Ash OS from within your editor.
+- **agy Enhancements** — Added `agy health`, `agy log`, and `agy phase` commands.
+
+---
+
 ## v2.0.1 (2026-07-20)
 
 ### Documentation

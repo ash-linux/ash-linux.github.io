@@ -1,0 +1,77 @@
+openapi: 3.0.0
+info:
+  title: Ash Linux API
+  description: HTTP API for Ash OS services (search, RAG, metrics).
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local Ash API server
+paths:
+  /api/search:
+    post:
+      summary: Hybrid semantic + keyword search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                limit:
+                  type: integer
+      responses:
+        '200':
+          description: Search results
+  /api/ask:
+    post:
+      summary: RAG question answering
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question:
+                  type: string
+      responses:
+        '200':
+          description: Answer
+  /api/status:
+    get:
+      summary: Service health
+      responses:
+        '200':
+          description: Health status
+  /api/stats:
+    get:
+      summary: Storage and performance metrics
+      responses:
+        '200':
+          description: Metrics
+  /api/index/scan:
+    post:
+      summary: Trigger reindex
+      responses:
+        '200':
+          description: Success
+  /api/config:
+    post:
+      summary: Update config
+      responses:
+        '200':
+          description: Success
+  /api/workspace/{id}:
+    delete:
+      summary: Destroy disposable workspace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success

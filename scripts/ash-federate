@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+if [ -z "$1" ]; then
+    echo "Usage: ash-federate <query>"
+    exit 1
+fi
+
+QUERY="$1"
+LIMIT="${2:-10}"
+
+# Assuming python3 and the dependencies are available.
+# Generate embedding
+TMP_VECTOR=$(mktemp)
+curl -s -X POST http://localhost:11434/api/embeddings \
+    -H "Content-Type: application/json" \
+    -d "{\"model\": \"nomic-embed-text\", \"prompt\": \"$QUERY\"}" \
+    | jq -r '.embedding' > "$TMP_VECTOR"
+
+python3 /usr/local/lib/ash/ai-services/ash_federation.py "$TMP_VECTOR" "$LIMIT"
+
+rm -f "$TMP_VECTOR"

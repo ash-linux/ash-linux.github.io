@@ -1,0 +1,6 @@
+{
+  "name": "calc",
+  "trigger": "calc:",
+  "command": "/etc/ash/plugins/calc.sh",
+  "description": "Simple calculator"
+}

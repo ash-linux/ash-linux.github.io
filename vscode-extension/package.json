@@ -1,0 +1,26 @@
+{
+  "name": "ash-search",
+  "displayName": "Ash OS Search",
+  "description": "Semantic search across your files using Ash OS",
+  "version": "1.0.0",
+  "publisher": "ash-linux",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ash.search",
+        "title": "Ash: Search Files"
+      }
+    ]
+  },
+  "scripts": {
+    "package": "vsce package"
+  }
+}

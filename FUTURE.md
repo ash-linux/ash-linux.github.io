@@ -48,7 +48,7 @@ Add `sync` before each critical phase. Use `flock` on the state file to prevent 
 ### 9. Backup of every modified config file
 Before touching `hyprland.conf`, `.bashrc`, `.zshrc`, `/etc/systemd/...`, copy the original to `/var/backups/ash-install/` with a timestamp. `ash-doctor --restore-configs` can revert any single file.
 
-### 10. SELinux / AppArmor profile generation
+### 10. SELinux / AppArmor profile generation - STATUS: ✅ Done
 Ship AppArmor profiles for qdrant, ollama, and lsfs-daemon that confine each to only the resources they need. Enforce during `verify_all`. Currently, all three run unrestricted.
 
 ---
@@ -118,7 +118,7 @@ TUI menu to choose embedding model with live size/speed/quality comparison:
 | snowflake-arctic-embed2 | 1.2GB | Best | Slow |
 | all-MiniLM-L6-v2 | 80MB | Fair | Fastest |
 
-### 26. Content extraction for binary files
+### 26. Content extraction for binary files - STATUS: ✅ Done
 Add `python-magic`, `textract`, `pdftotext`, `tesseract`, `pandoc`, and `ffmpeg` integration so these file types get indexed:
 - PDF → text via pdftotext
 - DOCX/PPTX/XLSX → text via python-docx/python-pptx/openpyxl
@@ -129,7 +129,7 @@ Add `python-magic`, `textract`, `pdftotext`, `tesseract`, `pandoc`, and `ffmpeg`
 ### 27. Hybrid local + remote model support
 Allow Ollama to pull a small local model for fast queries (nomic-embed-text) and route to a remote OpenAI/Anthropic API for complex understanding queries. Store the API key in the system keyring (`secret-tool` / `keyctl`). Add `--remote-provider openai|anthropic|generic --remote-model gpt-4o`.
 
-### 28. File relationship graph
+### 28. File relationship graph - STATUS: ✅ Done
 Build a knowledge graph of file relationships during indexing: imports, symlinks, git history, recent co-access patterns. Store in Qdrant as hybrid vector+graph index. Query "what depends on this config" or "files I was working on with that script".
 
 ### 29. Semantic clipboard history
@@ -164,7 +164,7 @@ Show a live-updating dashboard using `tput` cursor movement:
 └────────────────────────────────────────────────────┘
 ```
 
-### 32. `ash-doctor` comprehensive diagnostic tool
+### 32. `ash-doctor` comprehensive diagnostic tool - STATUS: ✅ Done
 Ship a standalone diagnostic script (`/usr/local/bin/ash-doctor`) that runs 40+ checks and exports to a shareable report:
 - Service health (systemd, ports, process existence)
 - Log tail (last 50 lines of each service)
@@ -191,7 +191,7 @@ Generate a manifest of every file created during install (`/var/log/ash-install/
 7. Removes user services and PATH additions
 8. Uninstalls packages that were installed and *not* pre-existing
 
-### 34. `--webhook` notification support
+### 34. `--webhook` notification support - STATUS: ✅ Done
 Optional Slack/Discord/ntfy/email webhook URL. Gets notified on:
 - Install completed successfully
 - Install failed (with phase name + log snippet)
@@ -199,7 +199,7 @@ Optional Slack/Discord/ntfy/email webhook URL. Gets notified on:
 - ash-doctor detects a degraded state
 Configurable via `--webhook-url https://hooks.slack.com/...` or `/etc/ash/webhook.conf`.
 
-### 35. HTML install report with waterfall chart
+### 35. HTML install report with waterfall chart - STATUS: ✅ Done
 Instead of just terminal output, write `/var/log/ash-install/report.html` with:
 - Waterfall timeline chart (install phases, their duration, parallelism)
 - Log viewer (searchable, expandable sections per phase)
@@ -207,7 +207,7 @@ Instead of just terminal output, write `/var/log/ash-install/report.html` with:
 - Error callouts with suggested fixes
 - Machine-readable JSON export alongside
 
-### 36. Automatic log rotation and archiving
+### 36. Automatic log rotation and archiving - STATUS: ✅ Done
 Ship a `logrotate.d` config for `/var/log/ash-install/*.log`:
 - Rotate weekly
 - Keep 4 weeks
@@ -229,7 +229,7 @@ On first Super+Space press, run a welcome query: "Your files are being indexed. 
 ### 40. Install telemetry (opt-in)
 After install, optionally POST anonymous stats (SHA256 of machine ID, phases + durations, distro, kernel, errors, hardware class). All displayed upfront with full transparency. `--no-telemetry` to disable. Public dashboard at `ash.sh/status` showing aggregate install stats.
 
-### 41. Desktop notifications during install
+### 41. Desktop notifications during install - STATUS: ✅ Done
 Use `notify-send` during long-running phases: "Qdrant: downloading (45%)", "Embedding model: pulling (5/10 min remaining)". Keeps the user informed even if they alt-tab away from the terminal.
 
 ### 42. Dark/light theme detection for TUI
@@ -315,13 +315,13 @@ nft add rule inet filter input ip daddr 127.0.0.1 tcp dport { 6333, 11434 } acce
 nft add rule inet filter input tcp dport { 6333, 11434 } drop
 ```
 
-### 58. Audit log
+### 58. Audit log - STATUS: ✅ Done
 Log every search query to a append-only audit log at `/var/log/ash/audit.log` with timestamp, truncated query, result count, and latency. Use `chattr +a` to make the log append-only. Configurable: `--audit-level none|metadata|full`.
 
 ### 59. Verified boot measurement
 Take a TPM PCR measurement after installation completes. On subsequent boots, `ash-doctor --verify-boot` checks that the measurement matches, detecting tampering of installed binaries. Requires `tpm2-tools`.
 
-### 60. GPG signing of install manifest
+### 60. GPG signing of install manifest - STATUS: ✅ Done
 Sign the install manifest (`/etc/ash-installed`) with a generated GPG key. Future `ash-doctor --verify` checks the signature. If the manifest is tampered, the user is alerted.
 
 ### 61. Secrets encryption
@@ -334,7 +334,7 @@ For air-gapped deploys, support detached GPG signatures: `ash-install --sign` GP
 
 ## 🗄️ Storage & Data Management
 
-### 63. Qdrant storage tiering
+### 63. Qdrant storage tiering - STATUS: ✅ Done
 Configure Qdrant with hot/warm/cold tiers:
 - Hot: in-memory segments (fastest, 1GB max)
 - Warm: mmap'd segments on NVMe (default)
@@ -366,14 +366,14 @@ Storage:
   Snapshot count: 3 (using 2.1 GB)
 ```
 
-### 68. Remote index federation
+### 68. Remote index federation - STATUS: ✅ Done
 Optionally connect multiple Ash machines so they share a unified index. A query on machine A returns results from machines B and C (with network latency compensation). Uses Qdrant's built-in raft consensus or a lightweight gRPC proxy.
 
 ---
 
 ## 🤖 Developer & Power User
 
-### 69. Plugin system for query handlers
+### 69. Plugin system for query handlers - STATUS: ✅ Done
 Design a plugin API so third-party handlers can register with the launcher:
 ```bash
 # /etc/ash/plugins/github.conf

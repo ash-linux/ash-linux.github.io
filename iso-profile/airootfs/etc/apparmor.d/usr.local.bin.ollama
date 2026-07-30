@@ -1,0 +1,13 @@
+#include <tunables/global>
+
+/usr/local/bin/ollama {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+
+  /usr/local/bin/ollama rm,
+  /usr/share/ollama/** rwlk,
+  /root/.ollama/** rwlk,
+  owner @{HOME}/.ollama/** rwlk,
+
+  network tcp,
+}

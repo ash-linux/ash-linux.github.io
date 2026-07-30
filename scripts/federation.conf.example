@@ -1,0 +1,9 @@
+# Ash Federation Configuration
+# List of peer machines to query during federated search
+peers:
+  - host: 192.168.1.10
+    port: 6333
+    api_key: "optional-api-key"
+  - host: 10.0.0.5
+    port: 6333
+    api_key: "another-key"

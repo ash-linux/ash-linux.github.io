@@ -1,0 +1,57 @@
+name: Test Ash Installer (Multi-Distro)
+
+on:
+  push:
+    branches: [ main, v4-dev ]
+  pull_request:
+    branches: [ main, v4-dev ]
+  workflow_dispatch:
+
+jobs:
+  test-installer:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro:
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - fedora-39
+          - opensuse-leap-15.5
+        include:
+          - distro: ubuntu-22.04
+            image: ubuntu:22.04
+          - distro: ubuntu-24.04
+            image: ubuntu:24.04
+          - distro: fedora-39
+            image: fedora:39
+          - distro: opensuse-leap-15.5
+            image: opensuse/leap:15.5
+
+    container:
+      image: ${{ matrix.image }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install Prerequisite (Ubuntu/Debian)
+        if: startsWith(matrix.distro, 'ubuntu')
+        run: |
+          apt-get update
+          apt-get install -y sudo curl wget systemd
+
+      - name: Install Prerequisite (Fedora)
+        if: startsWith(matrix.distro, 'fedora')
+        run: |
+          dnf install -y sudo curl wget systemd
+
+      - name: Install Prerequisite (OpenSUSE)
+        if: startsWith(matrix.distro, 'opensuse')
+        run: |
+          zypper install -y sudo curl wget systemd
+
+      - name: Run ash-install.sh (Dry Run)
+        run: |
+          # We use --dry-run so we don't start actual services in the container
+          bash scripts/ash-install.sh --dry-run --no-harden --no-firewall --profile server

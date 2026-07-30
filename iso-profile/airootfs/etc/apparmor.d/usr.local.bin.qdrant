@@ -1,0 +1,14 @@
+#include <tunables/global>
+
+/usr/local/bin/qdrant {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+
+  /usr/local/bin/qdrant rm,
+  /var/lib/qdrant/** rwlk,
+  /var/log/ash/** rw,
+
+  # Allow local network only
+  network tcp,
+  network udp,
+}

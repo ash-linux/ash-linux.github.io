@@ -1,0 +1,6 @@
+{
+  "name": "github",
+  "trigger": "gh:",
+  "command": "/etc/ash/plugins/github.sh",
+  "description": "Search GitHub issues"
+}

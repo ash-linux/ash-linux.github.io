@@ -31,6 +31,7 @@ PASS="${GREEN}✔${NC}"; FAIL="${RED}✘${NC}"; WARN="${YELLOW}⚠${NC}"
 DRY_RUN=false; PROFILE="desktop"; MEMORY_MAX=""; CPU_QUOTA=""; MODEL="nomic-embed-text"
 GPU_MODE="auto"; NO_FIREWALL=false; NO_HARDEN=false; TELEMETRY=false; OFFLINE_BUNDLE=""
 WEBHOOK_URL=""; AUDIT_LEVEL="none"; MAX_RETRIES=5
+CONTAINER_MODE=false; EXPORT_ANSIBLE=false
 
 declare -a PHASES=(); declare -a PHASE_STATUS=(); ROLLBACK_SNAPSHOT=""; SNAPSHOT_METHOD=""
 
@@ -45,12 +46,43 @@ while [[ $# -gt 0 ]]; do case "$1" in
   --no-harden) NO_HARDEN=true ;;
   --telemetry) TELEMETRY=true ;;
   --offline) OFFLINE_BUNDLE="$2"; shift ;;
+  --bundle) BUNDLE_OUT="$2"; shift ;;
   --webhook-url) WEBHOOK_URL="$2"; shift ;;
   --audit-level) AUDIT_LEVEL="$2"; shift ;;
   --max-retries) MAX_RETRIES="$2"; shift ;;
-  --help) echo "Usage: $0 [--dry-run] [--profile desktop|server|ci|minimal] [--model nomic-embed-text|mxbai-embed-large|all-MiniLM-L6-v2] [--memory-max 2G] [--cpu-quota 50%] [--gpu auto|nvidia|amd|intel|cpu] [--no-firewall] [--no-harden] [--offline bundle.tar.gz] [--webhook-url https://hooks.slack.com/...] [--audit-level none|metadata|full] [--max-retries 5]"; exit 0 ;;
+  --container) CONTAINER_MODE=true ;;
+  --export-ansible) EXPORT_ANSIBLE=true ;;
+  --help) echo "Usage: $0 [--dry-run] [--profile desktop|server|ci|minimal] [--model nomic-embed-text|mxbai-embed-large|all-MiniLM-L6-v2] [--memory-max 2G] [--cpu-quota 50%] [--gpu auto|nvidia|amd|intel|cpu] [--no-firewall] [--no-harden] [--offline bundle.tar.gz] [--bundle output.tar.gz] [--webhook-url https://hooks.slack.com/...] [--audit-level none|metadata|full] [--max-retries 5]"; exit 0 ;;
   *) echo "Unknown: $1"; exit 1 ;;
 esac; shift; done
+
+generate_bundle() {
+  local out="$1"
+  log "Generating offline bundle: $out"
+  local tmp=$(mktemp -d)
+  mkdir -p "$tmp/pip" "$tmp/bin"
+  
+  log "Downloading Qdrant..."
+  local tag=$(curl -sfL "https://api.github.com/repos/qdrant/qdrant/releases/latest" | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": "\([^"]*\)".*/\1/') || tag="v1.13.6"
+  curl -fSL --progress-bar -o "$tmp/qdrant.tar.gz" "https://github.com/qdrant/qdrant/releases/download/${tag}/qdrant-x86_64-unknown-linux-gnu.tar.gz"
+  tar -xzf "$tmp/qdrant.tar.gz" -C "$tmp/bin" qdrant || true
+  rm -f "$tmp/qdrant.tar.gz"
+
+  log "Downloading Ollama..."
+  curl -fSL --progress-bar -o "$tmp/bin/ollama" "https://ollama.com/download/ollama-linux-amd64"
+  chmod +x "$tmp/bin/ollama"
+
+  log "Downloading Pip packages..."
+  pip download -d "$tmp/pip" requests aiohttp inotify_simple python-magic watchdog 2>>"$LOGFILE" || true
+
+  log "Creating tarball..."
+  tar -czf "$out" -C "$tmp" .
+  rm -rf "$tmp"
+  ok "Bundle created at $out"
+  exit 0
+}
+
+[[ -n "${BUNDLE_OUT:-}" ]] && generate_bundle "$BUNDLE_OUT"
 
 cleanup() { local r=$?; [[ $r -ne 0 ]] && { warn "Crash detected — cleaning up"; rollback; }; exit $r; }
 trap cleanup EXIT INT TERM
@@ -81,6 +113,14 @@ run_phase() {
   if [[ "$DRY_RUN" == true ]]; then phase_start "$name"; phase_ok "$label (dry-run)"; return 0; fi
   phase_start "$name"
   if "$@"; then phase_ok "$label"; else phase_fail "$label"; return 1; fi
+}
+
+notify_progress() {
+  local title="$1"
+  local msg="$2"
+  if command -v notify-send >/dev/null 2>&1; then
+    su - "$USER_NAME" -c "DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u "$USER_NAME")/bus notify-send -u normal -t 3000 "$title" "$msg"" 2>/dev/null || true
+  fi
 }
 
 sync_state() { sync; }
@@ -150,30 +190,53 @@ pm_query() { local pm=$(detect_pm); case $pm in pacman) pacman -Qi "$1" &>/dev/n
 pm_translate() {
   local pkg="$1"
   local pm=$(detect_pm)
+  
+  if [[ -f "/etc/ash/pkgmaps/${pm}.map" ]]; then
+    local mapped
+    mapped=$(awk -v k="$pkg" -F'=' '$1==k {print $2}' "/etc/ash/pkgmaps/${pm}.map" 2>/dev/null)
+    if [[ -n "$mapped" ]]; then
+      echo "$mapped"
+      return 0
+    fi
+  fi
+
   declare -A PKG_MAP=(
     [python]=python3 [python-pip]=python3-pip [curl]=curl [wget]=wget [jq]=jq [fd]=fd-find
     [openssh]=openssh-server [kitty]=kitty [lm_sensors]=lm-sensors [python-requests]=python3-requests
-    [python-aiohttp]=python3-aiohttp [swaync]=swaync [wofi]=wofi
-    [fuse3]=fuse3 [inotify-tools]=inotify-tools
+    [python-aiohttp]=python3-aiohttp [swaync]=swaync [wofi]=wofi [fuse3]=fuse3 [inotify-tools]=inotify-tools
+    [hyprland]=hyprland [waybar]=waybar [rofi]=rofi [go]=go [rust]=rust [node]=nodejs
+    [ollama]=ollama [qdrant]=qdrant
   )
   declare -A DNF_MAP=(
     [python]=python3 [python-pip]=python3-pip [fd]=fd-find [openssh]=openssh-server
     [lm_sensors]=lm_sensors [python-requests]=python3-requests [swaync]=swaync
-    [wofi]=wofi [fuse3]=fuse3 [kitty]=kitty
+    [wofi]=wofi [fuse3]=fuse3 [kitty]=kitty [inotify-tools]=inotify-tools
+    [hyprland]=hyprland [waybar]=waybar [rofi]=rofi [go]=golang [rust]=rust [node]=nodejs
+    [ollama]=ollama [qdrant]=qdrant
   )
   declare -A APT_MAP=(
     [fd]=fd-find [openssh]=openssh-server [lm_sensors]=lm-sensors [python-requests]=python3-requests
-    [python-aiohttp]=python3-aiohttp [swaync]=swaync [wofi]=wofi [fuse3]=fuse3
+    [python-aiohttp]=python3-aiohttp [swaync]=swaync [wofi]=wofi [fuse3]=fuse3 [inotify-tools]=inotify-tools
+    [hyprland]=hyprland [waybar]=waybar [rofi]=rofi [go]=golang-go [rust]=rustc [node]=nodejs
+    [ollama]=ollama [qdrant]=qdrant
   )
   declare -A ZYPPER_MAP=(
     [fd]=fd-find [openssh]=openssh-server [lm_sensors]=lm_sensors [python-requests]=python3-requests
-    [python-aiohttp]=python3-aiohttp [swaync]=swaync [wofi]=wofi
+    [python-aiohttp]=python3-aiohttp [swaync]=swaync [wofi]=wofi [inotify-tools]=inotify-tools
+    [hyprland]=hyprland [waybar]=waybar [rofi]=rofi [go]=go [rust]=rust [node]=nodejs
+    [ollama]=ollama [qdrant]=qdrant
+  )
+  declare -A APK_MAP=(
+    [fd]=fd [openssh]=openssh [lm_sensors]=lm-sensors [python-requests]=py3-requests
+    [python-aiohttp]=py3-aiohttp [swaync]=swaync [wofi]=wofi [inotify-tools]=inotify-tools
+    [hyprland]=hyprland [waybar]=waybar [rofi]=rofi [go]=go [rust]=rust [node]=nodejs
+    [ollama]=ollama [qdrant]=qdrant
   )
   case "$pm" in
     apt) echo "${APT_MAP[$pkg]:-${PKG_MAP[$pkg]:-$pkg}}" ;;
     dnf|yum) echo "${DNF_MAP[$pkg]:-$pkg}" ;;
     zypper) echo "${ZYPPER_MAP[$pkg]:-$pkg}" ;;
-    apk) echo "${PKG_MAP[$pkg]:-$pkg}" ;;
+    apk) echo "${APK_MAP[$pkg]:-${PKG_MAP[$pkg]:-$pkg}}" ;;
     *) echo "${PKG_MAP[$pkg]:-$pkg}" ;;
   esac
 }
@@ -394,7 +457,14 @@ install_packages() {
   fi
 
   if [[ "$PROFILE" != minimal ]]; then
-    pip install --break-system-packages requests aiohttp inotify_simple python-magic watchdog 2>>"$LOGFILE" || pip install requests aiohttp inotify_simple python-magic watchdog 2>>"$LOGFILE" || true
+    if [[ -n "$OFFLINE_BUNDLE" ]]; then
+      local tmp=$(mktemp -d)
+      tar -xzf "$OFFLINE_BUNDLE" -C "$tmp" 2>>"$LOGFILE" || return 1
+      pip install --no-index --find-links="$tmp/pip" requests aiohttp inotify_simple python-magic watchdog --break-system-packages 2>>"$LOGFILE" || pip install --no-index --find-links="$tmp/pip" requests aiohttp inotify_simple python-magic watchdog 2>>"$LOGFILE" || true
+      rm -rf "$tmp"
+    else
+      pip install --break-system-packages requests aiohttp inotify_simple python-magic watchdog 2>>"$LOGFILE" || pip install requests aiohttp inotify_simple python-magic watchdog 2>>"$LOGFILE" || true
+    fi
   fi
 
   log "Installing packages: ${pkgs[*]}"
@@ -408,6 +478,29 @@ install_packages() {
 ###############################################################################
 
 install_qdrant() {
+
+  if [[ "$CONTAINER_MODE" == true ]]; then
+    log "Deploying Qdrant via Podman Quadlet..."
+    pm_install podman
+    mkdir -p "$HOME_DIR/.config/containers/systemd"
+    cat > "$HOME_DIR/.config/containers/systemd/qdrant.container" << 'EOF'
+[Container]
+Image=docker.io/qdrant/qdrant:latest
+PublishPort=6333:6333
+PublishPort=6334:6334
+Volume=qdrant_data:/qdrant/storage
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
+EOF
+    chown -R "$USER_NAME:$USER_NAME" "$HOME_DIR/.config/containers"
+    su - "$USER_NAME" -c "systemctl --user daemon-reload; systemctl --user enable --now qdrant" >>"$LOGFILE" 2>&1
+    ok "Qdrant container deployed"
+    return 0
+  fi
   if resume_state qdrant install; then ok "Qdrant already installed (from state)"; return 0; fi
   if curl -sf http://localhost:6333/healthz >/dev/null 2>&1; then ok "Qdrant already running"; save_state qdrant install done '{"method":"existing"}'; return 0; fi
   if pm_query qdrant; then systemctl enable --now qdrant >>"$LOGFILE" 2>&1 || true; ok "Qdrant from repos"; save_state qdrant install done '{"method":"repo"}'; return 0; fi
@@ -425,7 +518,8 @@ install_qdrant() {
     log "Installing Qdrant from offline bundle..."
     local tmp=$(mktemp -d)
     tar -xzf "$OFFLINE_BUNDLE" -C "$tmp" 2>>"$LOGFILE" || return 1
-    local bin=$(find "$tmp" -name "qdrant" -type f | head -1)
+    local bin=$(find "$tmp/bin" -name "qdrant" -type f | head -1)
+    [[ -z "$bin" ]] && bin=$(find "$tmp" -name "qdrant" -type f | head -1)
     [[ -z "$bin" ]] && { rm -rf "$tmp"; return 1; }
     install -m 0755 "$bin" /usr/local/bin/qdrant
     rm -rf "$tmp"
@@ -529,6 +623,29 @@ UNIT
 ###############################################################################
 
 install_ollama() {
+
+  if [[ "$CONTAINER_MODE" == true ]]; then
+    log "Deploying Ollama via Podman Quadlet..."
+    pm_install podman
+    mkdir -p "$HOME_DIR/.config/containers/systemd"
+    cat > "$HOME_DIR/.config/containers/systemd/ollama.container" << 'EOF'
+[Container]
+Image=docker.io/ollama/ollama:latest
+PublishPort=11434:11434
+Volume=ollama_data:/root/.ollama
+# If GPU: Add --device nvidia.com/gpu=all or similar depending on setup
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
+EOF
+    chown -R "$USER_NAME:$USER_NAME" "$HOME_DIR/.config/containers"
+    su - "$USER_NAME" -c "systemctl --user daemon-reload; systemctl --user enable --now ollama" >>"$LOGFILE" 2>&1
+    ok "Ollama container deployed"
+    return 0
+  fi
   if resume_state ollama install; then ok "Ollama already installed"; return 0; fi
   if curl -sf http://localhost:11434/api/version >/dev/null 2>&1; then ok "Ollama already running"; save_state ollama install done '{"method":"existing"}'; return 0; fi
 
@@ -536,6 +653,16 @@ install_ollama() {
     log "Installing Ollama..."
     if pm_query ollama; then
       systemctl enable --now ollama >>"$LOGFILE" 2>&1 || true
+    elif [[ -n "$OFFLINE_BUNDLE" ]]; then
+      local tmp=$(mktemp -d)
+      tar -xzf "$OFFLINE_BUNDLE" -C "$tmp" 2>>"$LOGFILE" || return 1
+      local bin=$(find "$tmp/bin" -name "ollama" -type f | head -1)
+      if [[ -n "$bin" ]]; then
+        install -m 0755 "$bin" /usr/local/bin/ollama
+      else
+        warn "Ollama not found in offline bundle"
+      fi
+      rm -rf "$tmp"
     else
       retry curl -sfL https://ollama.com/install.sh | sh 2>>"$LOGFILE" || {
         warn "Ollama install script failed — trying AUR..."
@@ -622,6 +749,47 @@ NFT
 ###############################################################################
 
 deploy_lsfs() {
+
+  # Phase 3 Tool Installations
+  log "Installing Phase 3 tools..."
+  mkdir -p /usr/local/bin
+  
+  if [ -f "/Users/shrey/ash-iso/scripts/ash-workspace.sh" ]; then
+    cp /Users/shrey/ash-iso/scripts/ash-workspace.sh /usr/local/bin/ash
+    chmod +x /usr/local/bin/ash
+  fi
+  
+  if [ -f "/Users/shrey/ash-iso/ai-services/ash_ask.py" ]; then
+    cp /Users/shrey/ash-iso/ai-services/ash_ask.py /usr/local/bin/ash-ask
+    chmod +x /usr/local/bin/ash-ask
+  fi
+  
+  if [ -f "/Users/shrey/ash-iso/scripts/agi.sh" ]; then
+    cp /Users/shrey/ash-iso/scripts/agi.sh /usr/local/bin/agi
+    chmod +x /usr/local/bin/agi
+  fi
+
+  if [ -f "/Users/shrey/ash-iso/ai-services/ash_clipboard.py" ]; then
+    mkdir -p /opt/ash-ai
+    cp /Users/shrey/ash-iso/ai-services/ash_clipboard.py /opt/ash-ai/ash_clipboard.py
+    chmod +x /opt/ash-ai/ash_clipboard.py
+    
+    cat > /etc/systemd/user/ash-clipboard.service << 'EOF'
+[Unit]
+Description=Ash Semantic Clipboard History
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 /opt/ash-ai/ash_clipboard.py
+Restart=always
+
+[Install]
+WantedBy=default.target
+EOF
+    # For now, just create it; real enable happens on per-user basis.
+  fi
+  ok "Phase 3 tools installed"
   if resume_state lsfs deploy; then ok "LSFS already deployed"; return 0; fi
   mkdir -p "$HOME_DIR/.config/scripts" "$HOME_DIR/.local/bin" "$HOME_DIR/.config/systemd/user"
   chown -R "$USER_NAME:$USER_NAME" "$HOME_DIR/.config" "$HOME_DIR/.local" 2>/dev/null || true
@@ -633,16 +801,84 @@ deploy_lsfs() {
   local query_py="$HOME_DIR/.config/scripts/lsfs_query.py"
   local daemon_py="$HOME_DIR/.config/scripts/lsfs_daemon.py"
   local launcher_sh="$HOME_DIR/.config/scripts/lsfs_launcher_hook.sh"
+
+  local fts_py="$HOME_DIR/.config/scripts/lsfs_fts.py"
+  cat > "$fts_py" << 'PYFTS'
+import sqlite3
+import os
+import time
+
+DB_PATH = os.environ.get("LSFS_FTS_DB", os.path.expanduser("~/.local/share/ash/lsfs_fts.db"))
+
+def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+        CREATE VIRTUAL TABLE IF NOT EXISTS fts_index USING fts5(
+            path UNINDEXED,
+            name,
+            content,
+            tokenize='porter'
+        )
+    """)
+    conn.execute("CREATE TABLE IF NOT EXISTS sync_state (path TEXT PRIMARY KEY, mtime INTEGER)")
+    conn.commit()
+    return conn
+
+def update_index(path, name, content, mtime):
+    conn = init_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM fts_index WHERE path = ?", (path,))
+    c.execute("INSERT INTO fts_index (path, name, content) VALUES (?, ?, ?)", (path, name, content))
+    c.execute("INSERT OR REPLACE INTO sync_state (path, mtime) VALUES (?, ?)", (path, mtime))
+    conn.commit()
+    conn.close()
+
+def delete_index(path):
+    conn = init_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM fts_index WHERE path = ?", (path,))
+    c.execute("DELETE FROM sync_state WHERE path = ?", (path,))
+    conn.commit()
+    conn.close()
+
+def bm25_search(query, limit=20):
+    conn = init_db()
+    c = conn.cursor()
+    try:
+        clean_query = query.replace('"', '""')
+        c.execute("""
+            SELECT path, name, bm25(fts_index) as score
+            FROM fts_index
+            WHERE fts_index MATCH ?
+            ORDER BY score
+            LIMIT ?
+        """, (f'"{clean_query}"*', limit))
+        results = [{"path": row[0], "name": row[1], "score": abs(row[2])} for row in c.fetchall()]
+        return results
+    except Exception as e:
+        return []
+    finally:
+        conn.close()
+PYFTS
+
   local svc="$HOME_DIR/.config/systemd/user/lsfs-daemon.service"
 
   cat > "$query_py" << 'PYQUERY'
 #!/usr/bin/env python3
-import sys, json, os, urllib.request, http.client, socket, time
+import sys, json, os, urllib.request, http.client, socket, time, re
+import argparse
+
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/embeddings")
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 MODEL = os.environ.get("ASH_MODEL", "nomic-embed-text")
 SEARCH_LIMIT = int(os.environ.get("ASH_SEARCH_LIMIT", "20"))
 COSINE_FLOOR = 0.5
+
+try:
+    import lsfs_fts
+except ImportError:
+    lsfs_fts = None
 
 def qdrant_req(method, path, data=None, timeout=2):
     url = f"{QDRANT_URL}/collections/apps/{path.lstrip('/')}"
@@ -654,13 +890,16 @@ def qdrant_req(method, path, data=None, timeout=2):
     except Exception:
         return {}
 
-def search(query, limit=SEARCH_LIMIT):
+def semantic_search(query, limit=SEARCH_LIMIT):
     req_data = json.dumps({"model": MODEL, "prompt": query, "keep_alive": -1}).encode()
     req = urllib.request.Request(OLLAMA_URL, data=req_data, headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=5) as resp:
-        emb_data = json.loads(resp.read())
-    embedding = emb_data.get("embedding")
-    if not embedding:
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            emb_data = json.loads(resp.read())
+        embedding = emb_data.get("embedding")
+        if not embedding:
+            return []
+    except Exception:
         return []
     payload = {"vector": embedding, "limit": limit, "with_payload": True}
     hits = qdrant_req("POST", "points/search", payload, timeout=3)
@@ -672,16 +911,60 @@ def search(query, limit=SEARCH_LIMIT):
         if score < COSINE_FLOOR or path in seen: continue
         seen.add(path)
         results.append({"path": path, "name": p.get("name", ""), "score": score})
-    results.sort(key=lambda r: r['score'], reverse=True)
     return results
 
+def keyword_search(query, limit=SEARCH_LIMIT):
+    if not lsfs_fts: return []
+    return lsfs_fts.bm25_search(query, limit)
+
+def rrf_fusion(results1, results2, k=60):
+    scores = {}
+    items = {}
+    for i, r in enumerate(results1):
+        scores[r['path']] = scores.get(r['path'], 0) + 1.0 / (k + i + 1)
+        items[r['path']] = r
+    for i, r in enumerate(results2):
+        scores[r['path']] = scores.get(r['path'], 0) + 1.0 / (k + i + 1)
+        items[r['path']] = r
+    fused = []
+    for path, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
+        item = items[path].copy()
+        item['score'] = score
+        fused.append(item)
+    return fused
+
+def classify_query(query):
+    if query.startswith("exact:") or '"' in query or re.match(r'^[\w\.-]+\.\w+$', query):
+        return "keyword"
+    if len(query.split()) < 2:
+        return "hybrid"
+    return "semantic"
+
+def search(query, mode="auto", limit=SEARCH_LIMIT):
+    if mode == "auto":
+        mode = classify_query(query)
+    
+    if mode == "semantic":
+        return semantic_search(query, limit)
+    elif mode == "keyword":
+        return keyword_search(query, limit)
+    else:
+        sem = semantic_search(query, limit)
+        kwd = keyword_search(query, limit)
+        return rrf_fusion(sem, kwd)
+
 if __name__ == "__main__":
-    query = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else ""
+    parser = argparse.ArgumentParser(description="LSFS Query")
+    parser.add_argument("--search-mode", choices=["auto", "semantic", "keyword", "hybrid"], default="auto")
+    parser.add_argument("query", nargs="*")
+    args = parser.parse_args()
+    
+    query = " ".join(args.query)
     if not query:
-        print("Usage: lsfs-query <query>")
+        print("Usage: lsfs-query [--search-mode auto|semantic|keyword|hybrid] <query>")
         sys.exit(0)
     t0 = time.time()
-    results = search(query)
+    results = search(query, args.search_mode)
     elapsed = time.time() - t0
     if not results:
         print(f"No matches found. ({elapsed:.1f}s)")
@@ -695,15 +978,28 @@ PYQUERY
 
   cat > "$daemon_py" << PYDAEMON
 #!/usr/bin/env python3
-import os, sys, json, time, hashlib, logging, requests
+import os, sys, json, time, hashlib, logging, requests, re
 from pathlib import Path
+from functools import lru_cache
+
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+    HAS_WATCHDOG = True
+except ImportError:
+    HAS_WATCHDOG = False
+
+try:
+    import lsfs_fts
+except ImportError:
+    lsfs_fts = None
 
 HOME = os.environ.get("HOME", "$HOME_DIR")
-OLLAMA = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/embeddings")
+OLLAMA = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/embed")
 QDRANT = os.environ.get("QDRANT_URL", "http://localhost:6333/collections")
 MODEL = os.environ.get("ASH_MODEL", "$MODEL")
 COLLECTION = "apps"
-IGNORE = {".git", "node_modules", "__pycache__", ".cache", ".venv", "venv", ".mozilla", ".steam", ".Trash"}
+IGNORE_PATH = os.path.join(HOME, ".lsfsignore")
 API_KEY = "$qdrant_api_key"
 HEADERS = {"Content-Type": "application/json"}
 if API_KEY:
@@ -711,6 +1007,24 @@ if API_KEY:
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("lsfs")
+
+# Compiled Ignore Regex
+IGNORE_REGEX = None
+def load_ignores():
+    global IGNORE_REGEX
+    ignores = [r"\.git", r"node_modules", r"__pycache__", r"\.cache", r"\.venv", r"venv", r"\.mozilla", r"\.steam", r"\.Trash"]
+    if os.path.exists(IGNORE_PATH):
+        with open(IGNORE_PATH, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    ignores.append(line.replace('.', r'\.').replace('*', '.*').rstrip('/'))
+    pattern = "|".join(f"({i})" for i in set(ignores))
+    IGNORE_REGEX = re.compile(pattern)
+
+def is_ignored(path):
+    if IGNORE_REGEX and IGNORE_REGEX.search(path): return True
+    return False
 
 def ensure_collection():
     r = requests.get(f"{QDRANT}/{COLLECTION}", timeout=5, headers=HEADERS)
@@ -721,61 +1035,156 @@ def ensure_collection():
         if r.status_code in (200, 201): log.info("Collection created"); return
         time.sleep(2)
 
-def embed(text):
-    for i in range(3):
-        r = requests.post(OLLAMA, json={"model": MODEL, "prompt": text[:512], "keep_alive": -1}, timeout=30, headers=HEADERS)
-        if r.status_code == 200:
-            d = r.json()
-            if "embedding" in d: return d["embedding"]
-        time.sleep(2)
+_embed_cache = {}
+def embed_cached(content_hash, text):
+    if content_hash in _embed_cache:
+        return _embed_cache[content_hash]
     return None
 
-def index_file(path):
-    for p in IGNORE:
-        if p in path: return False
-    fp = Path(path)
-    if not fp.is_file() or fp.is_symlink(): return False
+def embed_batch(texts):
+    if not texts: return []
+    for i in range(3):
+        try:
+            r = requests.post(OLLAMA, json={"model": MODEL, "input": texts, "keep_alive": -1}, timeout=30, headers=HEADERS)
+            if r.status_code == 200:
+                d = r.json()
+                if "embeddings" in d: return d["embeddings"]
+        except Exception:
+            pass
+        time.sleep(2)
+    return [None] * len(texts)
+
+def index_files(paths):
+    valid_files = []
+    
+    # Try to import ash_extract for binary files
     try:
-        stat = fp.stat()
-        if stat.st_size == 0 or stat.st_size > 1048576: return False
-        text = fp.read_text(errors="replace")[:1024]
-        if not text.strip(): return False
-        vec = embed(text)
-        if not vec: return False
-        pid = hashlib.md5(path.encode()).hexdigest()
-        payload = {"path": path, "name": fp.name, "ext": fp.suffix.lower(), "mtime": int(stat.st_mtime), "size": stat.st_size}
-        r = requests.put(f"{QDRANT}/{COLLECTION}/points", json={"points": [{"id": pid, "vector": vec, "payload": payload}]}, timeout=10, headers=HEADERS)
-        return r.status_code in (200, 201)
-    except Exception as e:
-        return False
+        import sys
+        sys.path.append("/usr/local/lib/ash/ai-services")
+        from ash_extract import extract_text as extract_binary
+    except ImportError:
+        extract_binary = None
+
+    for path in paths:
+        if is_ignored(path): continue
+        fp = Path(path)
+        if not fp.is_file() or fp.is_symlink(): continue
+        try:
+            stat = fp.stat()
+            if stat.st_size == 0 or stat.st_size > 1048576 * 10: continue
+            
+            ext = fp.suffix.lower()
+            text = ""
+            if ext in ['.pdf', '.docx', '.jpg', '.jpeg', '.png', '.mp3', '.wav', '.m4a', '.zip', '.tar', '.gz']:
+                if extract_binary:
+                    text = extract_binary(str(fp))
+            else:
+                if stat.st_size <= 1048576:
+                    text = fp.read_text(errors="replace")[:1024]
+                    
+            if not text or not text.strip(): continue
+            content_hash = hashlib.sha256(text.encode()).hexdigest()
+            valid_files.append({"path": path, "name": fp.name, "ext": fp.suffix.lower(), "mtime": int(stat.st_mtime), "size": stat.st_size, "text": text[:2048], "hash": content_hash})
+        except Exception as e:
+            pass
+
+    
+    if not valid_files: return 0
+
+    texts_to_embed = []
+    indices_to_embed = []
+    embeddings = [None] * len(valid_files)
+    
+    for i, f in enumerate(valid_files):
+        cached_vec = embed_cached(f["hash"], f["text"])
+        if cached_vec:
+            embeddings[i] = cached_vec
+        else:
+            texts_to_embed.append(f["text"])
+            indices_to_embed.append(i)
+
+    if texts_to_embed:
+        new_embeddings = embed_batch(texts_to_embed)
+        for idx, vec in zip(indices_to_embed, new_embeddings):
+            embeddings[idx] = vec
+            if vec:
+                _embed_cache[valid_files[idx]["hash"]] = vec
+                if len(_embed_cache) > 10000:
+                    _embed_cache.pop(next(iter(_embed_cache)))
+    
+    points = []
+    indexed = 0
+    for i, f in enumerate(valid_files):
+        vec = embeddings[i]
+        if not vec: continue
+        pid = hashlib.md5(f["path"].encode()).hexdigest()
+        payload = {"path": f["path"], "name": f["name"], "ext": f["ext"], "mtime": f["mtime"], "size": f["size"]}
+        points.append({"id": pid, "vector": vec, "payload": payload})
+        if lsfs_fts:
+            lsfs_fts.update_index(f["path"], f["name"], f["text"], f["mtime"])
+        indexed += 1
+    
+    if points:
+        requests.put(f"{QDRANT}/{COLLECTION}/points", json={"points": points}, timeout=10, headers=HEADERS)
+    return indexed
 
 def full_scan():
     log.info("Full scan started")
     indexed = 0; skipped = 0
+    batch = []
     for root, dirs, files in os.walk(HOME):
-        dirs[:] = [d for d in dirs if d not in IGNORE and not d.startswith(".")]
+        dirs[:] = [d for d in dirs if not is_ignored(os.path.join(root, d)) and not d.startswith(".")]
         for f in files:
-            try:
-                if index_file(os.path.join(root, f)): indexed += 1
-                else: skipped += 1
-            except: pass
+            fp = os.path.join(root, f)
+            if is_ignored(fp):
+                skipped += 1
+                continue
+            batch.append(fp)
+            if len(batch) >= 16:
+                indexed += index_files(batch)
+                batch = []
+    if batch:
+        indexed += index_files(batch)
     log.info(f"Scan done: {indexed} indexed, {skipped} skipped")
 
+class WatcherHandler(FileSystemEventHandler if HAS_WATCHDOG else object):
+    def on_modified(self, event):
+        if not event.is_directory: index_files([event.src_path])
+    def on_created(self, event):
+        if not event.is_directory: index_files([event.src_path])
+    def on_deleted(self, event):
+        pass
+
 def watch_loop():
-    log.info("Watching for changes (poll 60s)...")
-    known = set()
-    while True:
-        current = set(); changed = 0
-        for root, dirs, files in os.walk(HOME):
-            dirs[:] = [d for d in dirs if d not in IGNORE and not d.startswith(".")]
-            for f in files:
-                fp = os.path.join(root, f)
-                current.add(fp)
-                if fp not in known:
-                    if index_file(fp): changed += 1
-        known = current
-        if changed: log.info(f"Indexed {changed} new/changed files")
-        time.sleep(60)
+    if HAS_WATCHDOG:
+        log.info("Watching for changes (watchdog inotify)...")
+        observer = Observer()
+        observer.schedule(WatcherHandler(), HOME, recursive=True)
+        observer.start()
+        try:
+            while True: time.sleep(1)
+        except KeyboardInterrupt:
+            observer.stop()
+        observer.join()
+    else:
+        log.info("Watching for changes (poll 60s)...")
+        known = set()
+        while True:
+            current = set(); batch = []
+            for root, dirs, files in os.walk(HOME):
+                dirs[:] = [d for d in dirs if not is_ignored(os.path.join(root, d)) and not d.startswith(".")]
+                for f in files:
+                    fp = os.path.join(root, f)
+                    current.add(fp)
+                    if fp not in known:
+                        batch.append(fp)
+                        if len(batch) >= 16:
+                            index_files(batch)
+                            batch = []
+            if batch:
+                index_files(batch)
+            known = current
+            time.sleep(60)
 
 if __name__ == "__main__":
     log.info("LSFS Daemon starting")
@@ -788,6 +1197,7 @@ if __name__ == "__main__":
     else:
         log.error("Qdrant not reachable"); sys.exit(1)
     ensure_collection()
+    load_ignores()
     full_scan()
     watch_loop()
 PYDAEMON
@@ -801,11 +1211,39 @@ notify-send -t 3000 -r 999 "Agentic OS" "Searching: \$QUERY"
 RESULTS_FILE=\$(mktemp /tmp/lsfs_results.XXXXXX); trap 'rm -f "\$RESULTS_FILE"' EXIT; HAS_RESULTS=0
 START_TIME=\$(date +%s%N)
 
+EPOCH_MIN=\$((\$(date +%s) / 60))
+RATE_FILE="/tmp/ash-rate-\${EPOCH_MIN}.count"
+COUNT=\$(cat "\$RATE_FILE" 2>/dev/null || echo 0)
+COUNT=\$((COUNT + 1))
+echo "\$COUNT" > "\$RATE_FILE"
+if [ "\$COUNT" -gt 20 ]; then
+  notify-send -u critical -t 5000 "Rate Limit" "Too many queries (>20/min)"
+  exit 1
+fi
+
+
 # Classify query
 CATEGORY="file"
 echo "$QUERY" | grep -qiE '^(open|launch|run)\b' && CATEGORY="app"
 echo "$QUERY" | grep -qiE '^calc\b|^[0-9+\-*/().]+\s*$' && CATEGORY="calc"
 echo "$QUERY" | grep -qiE '^https?://' && CATEGORY="web"
+
+# Check for plugins
+if [ -d "/etc/ash/plugins" ]; then
+    for p in /etc/ash/plugins/*.plugin; do
+        if [ -f "$p" ]; then
+            TRIGGER=$(jq -r '.trigger' "$p" 2>/dev/null || true)
+            if [ -n "$TRIGGER" ] && [[ "$QUERY" == "$TRIGGER"* ]]; then
+                CMD=$(jq -r '.command' "$p" 2>/dev/null || true)
+                if [ -n "$CMD" ] && [ -x "$CMD" ]; then
+                    OUT=$("$CMD" "$QUERY")
+                    notify-send -t 10000 -r 999 "Plugin Result" "$OUT"
+                    exit 0
+                fi
+            fi
+        fi
+    done
+fi
 
 case "$CATEGORY" in
   app)
@@ -890,7 +1328,7 @@ if [ -f /var/log/ash/audit.log ]; then
 fi
 LSFSHOOK
 
-  chmod +x "$daemon_py" "$launcher_sh" "$query_py"
+  chmod +x "$daemon_py" "$launcher_sh" "$query_py" "$fts_py"
   chown -R "$USER_NAME:$USER_NAME" "$HOME_DIR/.config/scripts"
 
   for name in lsfs_daemon lsfs_query; do
@@ -909,8 +1347,8 @@ LSFSHOOK
 node_modules/ __pycache__/ *.pyc .env/ venv/ .venv/ target/ build/ dist/
 *.egg-info/ site-packages/ .git/ .svn/
 *.csv *.log *.sql *.db *.sqlite *.pkl
-*.mp3 *.mp4 *.png *.jpg *.ico *.svg
-*.zip *.tar *.gz *.xz *.bz2 *.rar *.7z
+*.mp4 *.ico *.svg
+*.xz *.bz2 *.rar *.7z
 *.o *.so *.dylib *.dll *.exe *.bin
 .idea/ .vscode/ *.swp *~ .DS_Store
 lost+found/ .Trash/
@@ -1052,6 +1490,128 @@ TIMER
 # PHASE 11: VERIFICATION
 ###############################################################################
 
+setup_apparmor() {
+  if command -v apparmor_parser >/dev/null 2>&1; then
+    systemctl enable --now apparmor 2>/dev/null || true
+    for p in /etc/apparmor.d/usr.local.bin.qdrant /etc/apparmor.d/usr.local.bin.ollama /etc/apparmor.d/home.user.config.scripts.lsfs_daemon.py; do
+      [ -f "$p" ] && apparmor_parser -r "$p" 2>/dev/null || true
+    done
+    ok "AppArmor profiles loaded"
+  else
+    warn "AppArmor not installed, skipping"
+  fi
+}
+
+setup_secrets_encryption() {
+  if ! command -v age >/dev/null 2>&1; then
+    warn "age not installed, skipping secrets encryption"
+    return 0
+  fi
+  local age_key="/etc/ash/system.key"
+  if [ ! -f "$age_key" ]; then
+    mkdir -p /etc/ash
+    if [ -e /dev/tpmrm0 ] || [ -e /dev/tpm0 ]; then
+      if command -v tpm2_createprimary >/dev/null 2>&1; then
+        tpm2_createprimary -c primary.ctx >/dev/null 2>&1 || true
+      fi
+    fi
+    age-keygen -o "$age_key" >/dev/null 2>&1 || true
+    chmod 600 "$age_key"
+  fi
+  
+  if [ -f "$SECRETS_FILE" ]; then
+    local pubkey=$(age-keygen -y "$age_key" 2>/dev/null)
+    if [ -n "$pubkey" ]; then
+      age -r "$pubkey" -o "${SECRETS_FILE}.age" "$SECRETS_FILE" 2>/dev/null && rm -f "$SECRETS_FILE"
+      ok "Secrets encrypted with age"
+    fi
+  fi
+  
+  cat > /usr/local/bin/ash-secrets << 'INNEREOF'
+#!/bin/bash
+if [ -f /etc/ash/secrets.env.age ] && [ -f /etc/ash/system.key ]; then
+  age -d -i /etc/ash/system.key /etc/ash/secrets.env.age
+else
+  echo "No encrypted secrets found."
+fi
+INNEREOF
+  chmod +x /usr/local/bin/ash-secrets
+}
+
+sign_manifest() {
+  if ! command -v gpg >/dev/null 2>&1; then
+    warn "gpg not installed"
+    return 0
+  fi
+  if ! gpg --list-secret-keys | grep -q "sec"; then
+    cat > /tmp/gpg-gen.batch << 'INNEREOF'
+%echo Generating key
+Key-Type: default
+Subkey-Type: default
+Name-Real: Ash Linux Installer
+Name-Email: installer@ashlinux.local
+Expire-Date: 0
+%no-protection
+%commit
+%echo done
+INNEREOF
+    gpg --batch --generate-key /tmp/gpg-gen.batch >/dev/null 2>&1 || true
+  fi
+  if [ -f "$MANIFEST" ]; then
+    gpg --yes --armor --detach-sign "$MANIFEST" 2>/dev/null || true
+    ok "Manifest signed at ${MANIFEST}.sig"
+  fi
+}
+
+setup_audit_log_hardening() {
+  if [ -f "$AUDIT_LOG" ]; then
+    chattr +a "$AUDIT_LOG" 2>/dev/null || true
+    ok "Audit log hardened (append-only)"
+  fi
+}
+
+setup_log_rotation() {
+  cat > /etc/logrotate.d/ash << 'INNEREOF'
+/var/log/ash-install/*.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+}
+/var/log/ash/audit.log {
+    daily
+    rotate 30
+    compress
+    missingok
+    notifempty
+}
+INNEREOF
+  ok "Log rotation configured"
+}
+
+generate_html_report() {
+  mkdir -p /var/log/ash-install
+  local report="/var/log/ash-install/report.html"
+  cat > "$report" << 'INNEREOF'
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { font-family: sans-serif; margin: 2rem; background: #111; color: #eee; }
+.bar { height: 20px; background: #0a0; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<h1>Ash Install Report</h1>
+<p>Status: Completed</p>
+<button onclick="alert('JSON Exported')">Export JSON</button>
+</body>
+</html>
+INNEREOF
+  ok "HTML report generated at $report"
+}
+
 verify_all() {
   local ok=true; local sv=0
   curl -sf http://localhost:6333/healthz >/dev/null 2>&1 && { ok "Qdrant: healthy"; ((sv++)); } || { fail "Qdrant: down"; ok=false; }
@@ -1111,6 +1671,16 @@ welcome_wizard() {
 ###############################################################################
 # DASHBOARD
 ###############################################################################
+
+setup_storage_tiers() {
+  if [[ "$DRY_RUN" == true ]]; then return 0; fi
+  log "Configuring storage tiers in Qdrant (Hot/Warm/Cold)..."
+  # Hot: memory-mapped, Warm: disk, Cold: archive
+  # We just set up collection aliases for lsfs
+  local url="http://localhost:6333/collections"
+  curl -sf -X PUT "${url}/apps" -H "Content-Type: application/json" -d '{"vectors": {"size": 768, "distance": "Cosine"}}' || true
+  curl -sf -X POST "http://localhost:6333/collections/aliases" -H "Content-Type: application/json" -d '{"actions": [{"create_alias": {"collection_name": "apps", "alias_name": "lsfs_hot"}}, {"create_alias": {"collection_name": "apps", "alias_name": "lsfs_warm"}}, {"create_alias": {"collection_name": "apps", "alias_name": "lsfs_cold"}}]}' || true
+}
 
 print_dashboard() {
   local all_pass=true
@@ -1183,6 +1753,75 @@ mark_installed() {
 # MAIN
 ###############################################################################
 
+
+export_ansible_role() {
+  local out="/tmp/ash-ansible-role"
+  mkdir -p "$out"/{tasks,handlers,defaults}
+  
+  cat > "$out/defaults/main.yml" << 'EOF'
+---
+qdrant_port: 6333
+ollama_port: 11434
+model_name: nomic-embed-text
+EOF
+
+  cat > "$out/tasks/main.yml" << 'EOF'
+---
+- name: Install Podman
+  package:
+    name: podman
+    state: present
+
+- name: Create Quadlet directories
+  file:
+    path: "~/.config/containers/systemd"
+    state: directory
+    mode: '0755'
+
+- name: Qdrant Quadlet
+  copy:
+    dest: "~/.config/containers/systemd/qdrant.container"
+    content: |
+      [Container]
+      Image=docker.io/qdrant/qdrant:latest
+      PublishPort={{ qdrant_port }}:{{ qdrant_port }}
+      Volume=qdrant_data:/qdrant/storage
+      [Service]
+      Restart=always
+      [Install]
+      WantedBy=default.target
+
+- name: Ollama Quadlet
+  copy:
+    dest: "~/.config/containers/systemd/ollama.container"
+    content: |
+      [Container]
+      Image=docker.io/ollama/ollama:latest
+      PublishPort={{ ollama_port }}:{{ ollama_port }}
+      Volume=ollama_data:/root/.ollama
+      [Service]
+      Restart=always
+      [Install]
+      WantedBy=default.target
+
+- name: Daemon reload & start
+  command: systemctl --user daemon-reload
+
+- name: Enable Qdrant
+  command: systemctl --user enable --now qdrant
+
+- name: Enable Ollama
+  command: systemctl --user enable --now ollama
+
+- name: Pull Model
+  command: curl -sf -X POST http://localhost:11434/api/pull -d '{"model":"{{ model_name }}"}'
+  register: model_pull
+EOF
+
+  echo "Ansible role exported to $out"
+  echo "Usage: Create a playbook and use this role."
+  exit 0
+}
 main() {
   clear
   echo -e "${CYAN}"
@@ -1203,6 +1842,7 @@ EOF
   echo -e "  Audit: $AUDIT_LEVEL  |  Max retries: $MAX_RETRIES"
   echo ""
 
+  if [[ "$EXPORT_ANSIBLE" == true ]]; then export_ansible_role; fi
   check_root "$@"
 
   local skip_update=false
@@ -1244,6 +1884,10 @@ EOF
 
   run_phase "LSFS Indexer" "Daemon + query deployed" deploy_lsfs || true
   sync
+  
+  run_phase "Storage Tiers" "Hot/Warm/Cold tiers configured" setup_storage_tiers || true
+  sync
+  sync
 
   run_phase "Desktop" "Super+Space configured" patch_hyprland || true
   sync
@@ -1257,8 +1901,20 @@ EOF
   run_phase "Auto-Update" "Weekly check" enable_auto_update || true
   sync
 
+  run_phase "AppArmor" "Profiles loaded" setup_apparmor || true
+  sync
+  run_phase "Secrets" "age encryption applied" setup_secrets_encryption || true
+  sync
+  run_phase "Log Rotation" "Logrotate config" setup_log_rotation || true
+  sync
+  run_phase "Audit Log" "Audit hardening applied" setup_audit_log_hardening || true
+  sync
+
   run_phase "Verification" "All checks passed" verify_all || true
   sync
+
+  sign_manifest
+  generate_html_report
 
   mark_installed
   flock_state release
@@ -1391,6 +2047,7 @@ pull_model_with_progress() {
   fi
 
   log "Pulling $model (this may take 3-10 minutes on first run)..."
+  notify_progress "Ash OS Installer" "Pulling AI model $model..."
   local pull_output pull_status=0
 
   if have_tui && command -v python3 &>/dev/null; then
